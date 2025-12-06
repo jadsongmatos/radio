@@ -1,0 +1,24 @@
+{
+  "projectName": "radio",
+  "mode": "file-router",
+  "typescript": true,
+  "tailwind": true,
+  "packageManager": "npm",
+  "addOnOptions": {
+    "prisma": {
+      "database": "sqlite"
+    }
+  },
+  "git": true,
+  "version": 1,
+  "framework": "react-cra",
+  "chosenAddOns": [
+    "eslint",
+    "prisma",
+    "compiler",
+    "form",
+    "start",
+    "store",
+    "tanstack-query"
+  ]
+}

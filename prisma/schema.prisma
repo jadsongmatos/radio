@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Todo {
+  id        Int      @id @default(autoincrement())
+  title     String
+  createdAt DateTime @default(now())
+}
+
+model RadioRequest {
+  id            String   @id @default(cuid())
+  recordingMbid String
+  trackName     String
+  artistName    String
+  releaseName   String?
+  coverUrl      String?
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+}
+
