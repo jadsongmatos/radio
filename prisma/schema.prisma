@@ -4,24 +4,21 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-}
-
-model Todo {
-  id        Int      @id @default(autoincrement())
-  title     String
-  createdAt DateTime @default(now())
+  // provider = "sqlite"
+  provider = "postgresql"
 }
 
 model RadioRequest {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   recordingMbid String
   trackName     String
   artistName    String
   releaseName   String?
   coverUrl      String?
-  createdAt     DateTime @default(now())
+  youtubeUrl    String
+  createdAt     DateTime  @default(now())
+  deleteAt      DateTime? @map("delete_at")
 
   @@index([createdAt])
+  @@index([deleteAt])
 }
-

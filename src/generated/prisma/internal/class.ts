@@ -19,8 +19,8 @@ const config: runtime.GetPrismaClientConfig = {
   "previewFeatures": [],
   "clientVersion": "7.1.0",
   "engineVersion": "ab635e6b9d606fa5c8fb8b1a7f909c3c3c1c98ba",
-  "activeProvider": "sqlite",
-  "inlineSchema": "generator client {\n  provider = \"prisma-client\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"sqlite\"\n}\n\nmodel Todo {\n  id        Int      @id @default(autoincrement())\n  title     String\n  createdAt DateTime @default(now())\n}\n\nmodel RadioRequest {\n  id            String   @id @default(cuid())\n  recordingMbid String\n  trackName     String\n  artistName    String\n  releaseName   String?\n  coverUrl      String?\n  createdAt     DateTime @default(now())\n\n  @@index([createdAt])\n}\n",
+  "activeProvider": "postgresql",
+  "inlineSchema": "generator client {\n  provider = \"prisma-client\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  // provider = \"sqlite\"\n  provider = \"postgresql\"\n}\n\nmodel RadioRequest {\n  id            String    @id @default(cuid())\n  recordingMbid String\n  trackName     String\n  artistName    String\n  releaseName   String?\n  coverUrl      String?\n  youtubeUrl    String\n  createdAt     DateTime  @default(now())\n  deleteAt      DateTime? @map(\"delete_at\")\n\n  @@index([createdAt])\n  @@index([deleteAt])\n}\n",
   "runtimeDataModel": {
     "models": {},
     "enums": {},
@@ -28,7 +28,7 @@ const config: runtime.GetPrismaClientConfig = {
   }
 }
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"Todo\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null},\"RadioRequest\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"recordingMbid\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"trackName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"artistName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"releaseName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"coverUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null}},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"RadioRequest\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"recordingMbid\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"trackName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"artistName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"releaseName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"coverUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"youtubeUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"deleteAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"delete_at\"}],\"dbName\":null}},\"enums\":{},\"types\":{}}")
 
 async function decodeBase64AsWasm(wasmBase64: string): Promise<WebAssembly.Module> {
   const { Buffer } = await import('node:buffer')
@@ -37,10 +37,10 @@ async function decodeBase64AsWasm(wasmBase64: string): Promise<WebAssembly.Modul
 }
 
 config.compilerWasm = {
-  getRuntime: async () => await import("@prisma/client/runtime/query_compiler_bg.sqlite.mjs"),
+  getRuntime: async () => await import("@prisma/client/runtime/query_compiler_bg.postgresql.mjs"),
 
   getQueryCompilerWasmModule: async () => {
-    const { wasm } = await import("@prisma/client/runtime/query_compiler_bg.sqlite.wasm-base64.mjs")
+    const { wasm } = await import("@prisma/client/runtime/query_compiler_bg.postgresql.wasm-base64.mjs")
     return await decodeBase64AsWasm(wasm)
   }
 }
@@ -58,8 +58,8 @@ export interface PrismaClientConstructor {
    * @example
    * ```
    * const prisma = new PrismaClient()
-   * // Fetch zero or more Todos
-   * const todos = await prisma.todo.findMany()
+   * // Fetch zero or more RadioRequests
+   * const radioRequests = await prisma.radioRequest.findMany()
    * ```
    * 
    * Read more in our [docs](https://pris.ly/d/client).
@@ -80,8 +80,8 @@ export interface PrismaClientConstructor {
  * @example
  * ```
  * const prisma = new PrismaClient()
- * // Fetch zero or more Todos
- * const todos = await prisma.todo.findMany()
+ * // Fetch zero or more RadioRequests
+ * const radioRequests = await prisma.radioRequest.findMany()
  * ```
  * 
  * Read more in our [docs](https://pris.ly/d/client).
@@ -175,16 +175,6 @@ export interface PrismaClient<
   }>>
 
       /**
-   * `prisma.todo`: Exposes CRUD operations for the **Todo** model.
-    * Example usage:
-    * ```ts
-    * // Fetch zero or more Todos
-    * const todos = await prisma.todo.findMany()
-    * ```
-    */
-  get todo(): Prisma.TodoDelegate<ExtArgs, { omit: OmitOpts }>;
-
-  /**
    * `prisma.radioRequest`: Exposes CRUD operations for the **RadioRequest** model.
     * Example usage:
     * ```ts

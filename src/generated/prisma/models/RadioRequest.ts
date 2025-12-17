@@ -31,7 +31,9 @@ export type RadioRequestMinAggregateOutputType = {
   artistName: string | null
   releaseName: string | null
   coverUrl: string | null
+  youtubeUrl: string | null
   createdAt: Date | null
+  deleteAt: Date | null
 }
 
 export type RadioRequestMaxAggregateOutputType = {
@@ -41,7 +43,9 @@ export type RadioRequestMaxAggregateOutputType = {
   artistName: string | null
   releaseName: string | null
   coverUrl: string | null
+  youtubeUrl: string | null
   createdAt: Date | null
+  deleteAt: Date | null
 }
 
 export type RadioRequestCountAggregateOutputType = {
@@ -51,7 +55,9 @@ export type RadioRequestCountAggregateOutputType = {
   artistName: number
   releaseName: number
   coverUrl: number
+  youtubeUrl: number
   createdAt: number
+  deleteAt: number
   _all: number
 }
 
@@ -63,7 +69,9 @@ export type RadioRequestMinAggregateInputType = {
   artistName?: true
   releaseName?: true
   coverUrl?: true
+  youtubeUrl?: true
   createdAt?: true
+  deleteAt?: true
 }
 
 export type RadioRequestMaxAggregateInputType = {
@@ -73,7 +81,9 @@ export type RadioRequestMaxAggregateInputType = {
   artistName?: true
   releaseName?: true
   coverUrl?: true
+  youtubeUrl?: true
   createdAt?: true
+  deleteAt?: true
 }
 
 export type RadioRequestCountAggregateInputType = {
@@ -83,7 +93,9 @@ export type RadioRequestCountAggregateInputType = {
   artistName?: true
   releaseName?: true
   coverUrl?: true
+  youtubeUrl?: true
   createdAt?: true
+  deleteAt?: true
   _all?: true
 }
 
@@ -166,7 +178,9 @@ export type RadioRequestGroupByOutputType = {
   artistName: string
   releaseName: string | null
   coverUrl: string | null
+  youtubeUrl: string
   createdAt: Date
+  deleteAt: Date | null
   _count: RadioRequestCountAggregateOutputType | null
   _min: RadioRequestMinAggregateOutputType | null
   _max: RadioRequestMaxAggregateOutputType | null
@@ -197,7 +211,9 @@ export type RadioRequestWhereInput = {
   artistName?: Prisma.StringFilter<"RadioRequest"> | string
   releaseName?: Prisma.StringNullableFilter<"RadioRequest"> | string | null
   coverUrl?: Prisma.StringNullableFilter<"RadioRequest"> | string | null
+  youtubeUrl?: Prisma.StringFilter<"RadioRequest"> | string
   createdAt?: Prisma.DateTimeFilter<"RadioRequest"> | Date | string
+  deleteAt?: Prisma.DateTimeNullableFilter<"RadioRequest"> | Date | string | null
 }
 
 export type RadioRequestOrderByWithRelationInput = {
@@ -207,7 +223,9 @@ export type RadioRequestOrderByWithRelationInput = {
   artistName?: Prisma.SortOrder
   releaseName?: Prisma.SortOrderInput | Prisma.SortOrder
   coverUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  youtubeUrl?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  deleteAt?: Prisma.SortOrderInput | Prisma.SortOrder
 }
 
 export type RadioRequestWhereUniqueInput = Prisma.AtLeast<{
@@ -220,7 +238,9 @@ export type RadioRequestWhereUniqueInput = Prisma.AtLeast<{
   artistName?: Prisma.StringFilter<"RadioRequest"> | string
   releaseName?: Prisma.StringNullableFilter<"RadioRequest"> | string | null
   coverUrl?: Prisma.StringNullableFilter<"RadioRequest"> | string | null
+  youtubeUrl?: Prisma.StringFilter<"RadioRequest"> | string
   createdAt?: Prisma.DateTimeFilter<"RadioRequest"> | Date | string
+  deleteAt?: Prisma.DateTimeNullableFilter<"RadioRequest"> | Date | string | null
 }, "id">
 
 export type RadioRequestOrderByWithAggregationInput = {
@@ -230,7 +250,9 @@ export type RadioRequestOrderByWithAggregationInput = {
   artistName?: Prisma.SortOrder
   releaseName?: Prisma.SortOrderInput | Prisma.SortOrder
   coverUrl?: Prisma.SortOrderInput | Prisma.SortOrder
+  youtubeUrl?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  deleteAt?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.RadioRequestCountOrderByAggregateInput
   _max?: Prisma.RadioRequestMaxOrderByAggregateInput
   _min?: Prisma.RadioRequestMinOrderByAggregateInput
@@ -246,7 +268,9 @@ export type RadioRequestScalarWhereWithAggregatesInput = {
   artistName?: Prisma.StringWithAggregatesFilter<"RadioRequest"> | string
   releaseName?: Prisma.StringNullableWithAggregatesFilter<"RadioRequest"> | string | null
   coverUrl?: Prisma.StringNullableWithAggregatesFilter<"RadioRequest"> | string | null
+  youtubeUrl?: Prisma.StringWithAggregatesFilter<"RadioRequest"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"RadioRequest"> | Date | string
+  deleteAt?: Prisma.DateTimeNullableWithAggregatesFilter<"RadioRequest"> | Date | string | null
 }
 
 export type RadioRequestCreateInput = {
@@ -256,7 +280,9 @@ export type RadioRequestCreateInput = {
   artistName: string
   releaseName?: string | null
   coverUrl?: string | null
+  youtubeUrl: string
   createdAt?: Date | string
+  deleteAt?: Date | string | null
 }
 
 export type RadioRequestUncheckedCreateInput = {
@@ -266,7 +292,9 @@ export type RadioRequestUncheckedCreateInput = {
   artistName: string
   releaseName?: string | null
   coverUrl?: string | null
+  youtubeUrl: string
   createdAt?: Date | string
+  deleteAt?: Date | string | null
 }
 
 export type RadioRequestUpdateInput = {
@@ -276,7 +304,9 @@ export type RadioRequestUpdateInput = {
   artistName?: Prisma.StringFieldUpdateOperationsInput | string
   releaseName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeUrl?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deleteAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type RadioRequestUncheckedUpdateInput = {
@@ -286,7 +316,9 @@ export type RadioRequestUncheckedUpdateInput = {
   artistName?: Prisma.StringFieldUpdateOperationsInput | string
   releaseName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeUrl?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deleteAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type RadioRequestCreateManyInput = {
@@ -296,7 +328,9 @@ export type RadioRequestCreateManyInput = {
   artistName: string
   releaseName?: string | null
   coverUrl?: string | null
+  youtubeUrl: string
   createdAt?: Date | string
+  deleteAt?: Date | string | null
 }
 
 export type RadioRequestUpdateManyMutationInput = {
@@ -306,7 +340,9 @@ export type RadioRequestUpdateManyMutationInput = {
   artistName?: Prisma.StringFieldUpdateOperationsInput | string
   releaseName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeUrl?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deleteAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type RadioRequestUncheckedUpdateManyInput = {
@@ -316,7 +352,9 @@ export type RadioRequestUncheckedUpdateManyInput = {
   artistName?: Prisma.StringFieldUpdateOperationsInput | string
   releaseName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   coverUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  youtubeUrl?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  deleteAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
 }
 
 export type RadioRequestCountOrderByAggregateInput = {
@@ -326,7 +364,9 @@ export type RadioRequestCountOrderByAggregateInput = {
   artistName?: Prisma.SortOrder
   releaseName?: Prisma.SortOrder
   coverUrl?: Prisma.SortOrder
+  youtubeUrl?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  deleteAt?: Prisma.SortOrder
 }
 
 export type RadioRequestMaxOrderByAggregateInput = {
@@ -336,7 +376,9 @@ export type RadioRequestMaxOrderByAggregateInput = {
   artistName?: Prisma.SortOrder
   releaseName?: Prisma.SortOrder
   coverUrl?: Prisma.SortOrder
+  youtubeUrl?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  deleteAt?: Prisma.SortOrder
 }
 
 export type RadioRequestMinOrderByAggregateInput = {
@@ -346,11 +388,25 @@ export type RadioRequestMinOrderByAggregateInput = {
   artistName?: Prisma.SortOrder
   releaseName?: Prisma.SortOrder
   coverUrl?: Prisma.SortOrder
+  youtubeUrl?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  deleteAt?: Prisma.SortOrder
+}
+
+export type StringFieldUpdateOperationsInput = {
+  set?: string
 }
 
 export type NullableStringFieldUpdateOperationsInput = {
   set?: string | null
+}
+
+export type DateTimeFieldUpdateOperationsInput = {
+  set?: Date | string
+}
+
+export type NullableDateTimeFieldUpdateOperationsInput = {
+  set?: Date | string | null
 }
 
 
@@ -362,7 +418,9 @@ export type RadioRequestSelect<ExtArgs extends runtime.Types.Extensions.Internal
   artistName?: boolean
   releaseName?: boolean
   coverUrl?: boolean
+  youtubeUrl?: boolean
   createdAt?: boolean
+  deleteAt?: boolean
 }, ExtArgs["result"]["radioRequest"]>
 
 export type RadioRequestSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -372,7 +430,9 @@ export type RadioRequestSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   artistName?: boolean
   releaseName?: boolean
   coverUrl?: boolean
+  youtubeUrl?: boolean
   createdAt?: boolean
+  deleteAt?: boolean
 }, ExtArgs["result"]["radioRequest"]>
 
 export type RadioRequestSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -382,7 +442,9 @@ export type RadioRequestSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   artistName?: boolean
   releaseName?: boolean
   coverUrl?: boolean
+  youtubeUrl?: boolean
   createdAt?: boolean
+  deleteAt?: boolean
 }, ExtArgs["result"]["radioRequest"]>
 
 export type RadioRequestSelectScalar = {
@@ -392,10 +454,12 @@ export type RadioRequestSelectScalar = {
   artistName?: boolean
   releaseName?: boolean
   coverUrl?: boolean
+  youtubeUrl?: boolean
   createdAt?: boolean
+  deleteAt?: boolean
 }
 
-export type RadioRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "recordingMbid" | "trackName" | "artistName" | "releaseName" | "coverUrl" | "createdAt", ExtArgs["result"]["radioRequest"]>
+export type RadioRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "recordingMbid" | "trackName" | "artistName" | "releaseName" | "coverUrl" | "youtubeUrl" | "createdAt" | "deleteAt", ExtArgs["result"]["radioRequest"]>
 
 export type $RadioRequestPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "RadioRequest"
@@ -407,7 +471,9 @@ export type $RadioRequestPayload<ExtArgs extends runtime.Types.Extensions.Intern
     artistName: string
     releaseName: string | null
     coverUrl: string | null
+    youtubeUrl: string
     createdAt: Date
+    deleteAt: Date | null
   }, ExtArgs["result"]["radioRequest"]>
   composites: {}
 }
@@ -837,7 +903,9 @@ export interface RadioRequestFieldRefs {
   readonly artistName: Prisma.FieldRef<"RadioRequest", 'String'>
   readonly releaseName: Prisma.FieldRef<"RadioRequest", 'String'>
   readonly coverUrl: Prisma.FieldRef<"RadioRequest", 'String'>
+  readonly youtubeUrl: Prisma.FieldRef<"RadioRequest", 'String'>
   readonly createdAt: Prisma.FieldRef<"RadioRequest", 'DateTime'>
+  readonly deleteAt: Prisma.FieldRef<"RadioRequest", 'DateTime'>
 }
     
 
@@ -1043,6 +1111,7 @@ export type RadioRequestCreateManyArgs<ExtArgs extends runtime.Types.Extensions.
    * The data used to create many RadioRequests.
    */
   data: Prisma.RadioRequestCreateManyInput | Prisma.RadioRequestCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**
@@ -1061,6 +1130,7 @@ export type RadioRequestCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Ex
    * The data used to create many RadioRequests.
    */
   data: Prisma.RadioRequestCreateManyInput | Prisma.RadioRequestCreateManyInput[]
+  skipDuplicates?: boolean
 }
 
 /**

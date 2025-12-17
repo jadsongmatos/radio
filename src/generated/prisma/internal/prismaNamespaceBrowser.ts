@@ -51,7 +51,6 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
-  Todo: 'Todo',
   RadioRequest: 'RadioRequest'
 } as const
 
@@ -62,19 +61,13 @@ export type ModelName = (typeof ModelName)[keyof typeof ModelName]
  */
 
 export const TransactionIsolationLevel = {
+  ReadUncommitted: 'ReadUncommitted',
+  ReadCommitted: 'ReadCommitted',
+  RepeatableRead: 'RepeatableRead',
   Serializable: 'Serializable'
 } as const
 
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
-
-
-export const TodoScalarFieldEnum = {
-  id: 'id',
-  title: 'title',
-  createdAt: 'createdAt'
-} as const
-
-export type TodoScalarFieldEnum = (typeof TodoScalarFieldEnum)[keyof typeof TodoScalarFieldEnum]
 
 
 export const RadioRequestScalarFieldEnum = {
@@ -84,7 +77,9 @@ export const RadioRequestScalarFieldEnum = {
   artistName: 'artistName',
   releaseName: 'releaseName',
   coverUrl: 'coverUrl',
-  createdAt: 'createdAt'
+  youtubeUrl: 'youtubeUrl',
+  createdAt: 'createdAt',
+  deleteAt: 'deleteAt'
 } as const
 
 export type RadioRequestScalarFieldEnum = (typeof RadioRequestScalarFieldEnum)[keyof typeof RadioRequestScalarFieldEnum]
@@ -96,6 +91,14 @@ export const SortOrder = {
 } as const
 
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+export const QueryMode = {
+  default: 'default',
+  insensitive: 'insensitive'
+} as const
+
+export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
 
 
 export const NullsOrder = {
