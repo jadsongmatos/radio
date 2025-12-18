@@ -23,8 +23,9 @@ let ytPromise: Promise<Innertube> | null = null
 async function getYt() {
   if (!ytPromise) {
     // sem cookie / sem login
+    // cache NÃO persistente (não escreve em disco)
     ytPromise = Innertube.create({
-      cache: new UniversalCache(true),
+      cache: new UniversalCache(false),
     })
   }
   return ytPromise

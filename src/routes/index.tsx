@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
 
-import AudioPlayer from 'react-h5-audio-player'
+import AudioPlayer, { RHAP_UI } from 'react-h5-audio-player'
 import 'react-h5-audio-player/lib/styles.css'
 
 import {
@@ -15,23 +15,22 @@ import {
   Container,
   Divider,
   FormControl,
+  GlobalStyles,
   IconButton,
   MenuItem,
   Select,
   Stack,
   TextField,
   Typography,
-  useMediaQuery,
-  useTheme,
-  GlobalStyles,
   keyframes,
+  useTheme,
 } from '@mui/material'
 import {
   Add as AddIcon,
-  QueueMusic as QueueIcon,
-  Search as SearchIcon,
-  Radio as RadioIcon,
   Equalizer as EqualizerIcon,
+  QueueMusic as QueueIcon,
+  Radio as RadioIcon,
+  Search as SearchIcon,
 } from '@mui/icons-material'
 
 /**  ANIMAÇÕES CSS (Keyframes) */
@@ -205,10 +204,7 @@ function getYTArtistText(item: YTMusicSearchItem) {
 }
 
 function getYTCoverUrl(item: YTMusicSearchItem) {
-  return (
-    item.thumbnailUrl ||
-    `https://i.ytimg.com/vi/${item.videoId}/hqdefault.jpg`
-  )
+  return item.thumbnailUrl || `https://i.ytimg.com/vi/${item.videoId}/hqdefault.jpg`
 }
 
 async function searchYouTubeMusic(query: string, limit = 8): Promise<YTMusicSearchItem[]> {
@@ -409,41 +405,27 @@ function MusicRequestQueuePage() {
             background: '#000',
             fontFamily: "'Inter', sans-serif",
           },
+
+          /* ✅ "layout limpo": some barra/tempo/seek */
+          '.rhap_progress-section': { display: 'none !important' },
+          '.rhap_time': { display: 'none !important' },
+
           '.rhap_container': {
             backgroundColor: 'transparent !important',
             boxShadow: 'none !important',
             padding: '10px 0 !important',
           },
-          '.rhap_time': {
-            color: '#a5b4fc !important',
-            fontWeight: '600',
-            fontSize: '12px',
-          },
-          '.rhap_progress-bar': {
-            height: '6px !important',
-            borderRadius: '4px',
-            backgroundColor: 'rgba(255,255,255,0.1) !important',
-          },
-          '.rhap_progress-filled': {
-            background: 'linear-gradient(90deg, #6366f1, #a855f7) !important',
-            borderRadius: '4px',
-          },
-          '.rhap_progress-indicator': {
-            background: '#fff !important',
-            boxShadow: '0 0 10px rgba(255,255,255,0.8) !important',
-            width: '16px !important',
-            height: '16px !important',
-            top: '-5px !important',
-          },
+
+          /* Mantém o look dos botões */
           '.rhap_button-clear': {
             color: '#fff !important',
             opacity: 0.9,
             transition: 'all 0.2s',
-            '&:hover': {
-              opacity: 1,
-              transform: 'scale(1.1)',
-              color: '#818cf8 !important',
-            },
+          },
+          '.rhap_button-clear:hover': {
+            opacity: 1,
+            transform: 'scale(1.1)',
+            color: '#818cf8 !important',
           },
           '.rhap_main-controls-button': {
             fontSize: '40px !important',
@@ -489,15 +471,8 @@ function MusicRequestQueuePage() {
         />
 
         <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1, pt: { xs: 4, md: 8 } }}>
-          
           {/* HEADER */}
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-            mb={4}
-            sx={{ px: 1 }}
-          >
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4} sx={{ px: 1 }}>
             <Stack direction="row" alignItems="center" spacing={2}>
               <Box
                 sx={{
@@ -514,13 +489,17 @@ function MusicRequestQueuePage() {
                 <RadioIcon sx={{ color: '#fff', fontSize: 28 }} />
               </Box>
               <Box>
-                <Typography variant="h4" fontWeight={900} sx={{ 
-                  background: 'linear-gradient(to right, #fff, #c4b5fd)',
-                  backgroundClip: 'text',
-                  color: 'transparent',
-                  letterSpacing: '-1px',
-                  lineHeight: 1
-                }}>
+                <Typography
+                  variant="h4"
+                  fontWeight={900}
+                  sx={{
+                    background: 'linear-gradient(to right, #fff, #c4b5fd)',
+                    backgroundClip: 'text',
+                    color: 'transparent',
+                    letterSpacing: '-1px',
+                    lineHeight: 1,
+                  }}
+                >
                   WEBRADIO
                 </Typography>
                 <Stack direction="row" spacing={1} alignItems="center">
@@ -533,21 +512,20 @@ function MusicRequestQueuePage() {
             </Stack>
 
             <Chip
-              label={isOnline ? "ON AIR" : "OFFLINE"}
+              label={isOnline ? 'ON AIR' : 'OFFLINE'}
               sx={{
                 bgcolor: isOnline ? '#ef4444' : '#333',
                 color: '#fff',
                 fontWeight: 'bold',
                 borderRadius: '8px',
                 animation: isOnline ? `${pulseGlow} 2s infinite` : 'none',
-                border: '1px solid rgba(255,255,255,0.1)'
+                border: '1px solid rgba(255,255,255,0.1)',
               }}
             />
           </Stack>
 
           {/* PLAYER PRINCIPAL (DISCO DE VINIL) */}
           <GlassCard sx={{ mb: 6, position: 'relative', overflow: 'hidden' }}>
-            
             {/* Background Blur da Capa */}
             <Box
               sx={{
@@ -565,41 +543,45 @@ function MusicRequestQueuePage() {
               }}
             />
 
-            <Stack 
-              direction={{ xs: 'column', sm: 'row' }} 
-              spacing={{ xs: 4, sm: 6 }} 
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={{ xs: 4, sm: 6 }}
               sx={{ p: { xs: 3, sm: 5 }, position: 'relative', zIndex: 1 }}
               alignItems="center"
             >
               {/* DISCO GIRATÓRIO (VINIL) */}
-              <Box 
-                sx={{ 
+              <Box
+                sx={{
                   position: 'relative',
                   width: { xs: 240, sm: 280 },
                   height: { xs: 240, sm: 280 },
-                  flexShrink: 0
+                  flexShrink: 0,
                 }}
               >
                 {/* Wrapper do Disco (Sombra e Borda) */}
-                <Box sx={{
-                  width: '100%',
-                  height: '100%',
-                  borderRadius: '50%',
-                  boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
-                  border: '4px solid rgba(25,25,25, 0.8)',
-                  position: 'relative',
-                  // Se estiver tocando (online), aplica animação spin
-                  animation: isOnline ? `${spin} 8s linear infinite` : 'none',
-                  // Pseudo-elemento para brilho do vinil (opcional)
-                  '&::after': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0, left: 0, right: 0, bottom: 0,
+                <Box
+                  sx={{
+                    width: '100%',
+                    height: '100%',
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.05) 100%)',
-                    pointerEvents: 'none'
-                  }
-                }}>
+                    boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+                    border: '4px solid rgba(25,25,25, 0.8)',
+                    position: 'relative',
+                    animation: isOnline ? `${spin} 8s linear infinite` : 'none',
+                    '&::after': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      borderRadius: '50%',
+                      background:
+                        'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.05) 100%)',
+                      pointerEvents: 'none',
+                    },
+                  }}
+                >
                   {/* Imagem da Arte (Arredondada) */}
                   <Box
                     component="img"
@@ -611,29 +593,30 @@ function MusicRequestQueuePage() {
                       objectFit: 'cover',
                     }}
                   />
-                  
+
                   {/* Furo do Meio (Vinil) */}
-                  <Box sx={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    width: 50,
-                    height: 50,
-                    bgcolor: '#1a1a1a', // Cor escura do buraco
-                    borderRadius: '50%',
-                    border: '3px solid #333', // Borda do label
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.8)'
-                  }}>
-                    {/* Eixo central (Spindle) */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      width: 50,
+                      height: 50,
+                      bgcolor: '#1a1a1a',
+                      borderRadius: '50%',
+                      border: '3px solid #333',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.8)',
+                    }}
+                  >
                     <Box sx={{ width: 8, height: 8, bgcolor: '#888', borderRadius: '50%' }} />
                   </Box>
                 </Box>
 
-                {/* Badge de Pedido (Fora do disco para não girar junto, ou dentro se quiser) */}
+                {/* Badge de Pedido */}
                 {azura?.now_playing?.is_request && (
                   <Chip
                     label="Pedido"
@@ -655,22 +638,22 @@ function MusicRequestQueuePage() {
 
               {/* Informações e Controles */}
               <Box sx={{ flex: 1, width: '100%', textAlign: { xs: 'center', sm: 'left' } }}>
-                <Typography 
-                  variant="h4" 
-                  fontWeight={800} 
+                <Typography
+                  variant="h4"
+                  fontWeight={800}
                   gutterBottom
-                  sx={{ 
+                  sx={{
                     textShadow: '0 2px 10px rgba(0,0,0,0.5)',
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical',
                     overflow: 'hidden',
-                    lineHeight: 1.2
+                    lineHeight: 1.2,
                   }}
                 >
                   {getAzuraSongText(currentSong) || 'Aguardando informações...'}
                 </Typography>
-                
+
                 <Typography variant="h6" sx={{ color: '#a5b4fc', mb: 3, fontWeight: 500 }}>
                   {currentSong?.album || 'Rádio Online'}
                 </Typography>
@@ -678,49 +661,59 @@ function MusicRequestQueuePage() {
                 {/* Seletor de Qualidade */}
                 {mounts.length > 0 && (
                   <FormControl size="small" variant="standard" sx={{ mb: 2, minWidth: 120 }}>
-                     <Select
-                        value={selectedMountId}
-                        onChange={(e) => setSelectedMountId(e.target.value)}
-                        disableUnderline
-                        sx={{
-                          color: '#fff',
-                          fontSize: '0.875rem',
-                          '.MuiSelect-icon': { color: '#a5b4fc' },
-                          '& .MuiSelect-select': { 
-                            padding: '4px 8px',
-                            background: 'rgba(255,255,255,0.1)',
-                            borderRadius: 1
-                          }
-                        }}
-                      >
-                        <MenuItem value="auto">Auto Quality</MenuItem>
-                        {mounts.map((m) => (
-                          <MenuItem key={m.id} value={String(m.id)}>
-                            {m.bitrate}kbps {m.format.toUpperCase()}
-                          </MenuItem>
-                        ))}
-                      </Select>
+                    <Select
+                      value={selectedMountId}
+                      onChange={(e) => setSelectedMountId(e.target.value)}
+                      disableUnderline
+                      sx={{
+                        color: '#fff',
+                        fontSize: '0.875rem',
+                        '.MuiSelect-icon': { color: '#a5b4fc' },
+                        '& .MuiSelect-select': {
+                          padding: '4px 8px',
+                          background: 'rgba(255,255,255,0.1)',
+                          borderRadius: 1,
+                        },
+                      }}
+                    >
+                      <MenuItem value="auto">Auto Quality</MenuItem>
+                      {mounts.map((m) => (
+                        <MenuItem key={m.id} value={String(m.id)}>
+                          {m.bitrate}kbps {m.format.toUpperCase()}
+                        </MenuItem>
+                      ))}
+                    </Select>
                   </FormControl>
                 )}
 
                 <Box sx={{ width: '100%' }}>
+                  {/* ✅ PLAYER "LIMPO" */}
                   <AudioPlayer
                     src={streamSrc}
                     preload="none"
                     showJumpControls={false}
                     showSkipControls={false}
                     customAdditionalControls={[]}
-                    layout="stacked-reverse"
+                    customProgressBarSection={[]} // sem seek/tempo
+                    customControlsSection={[
+                      RHAP_UI.MAIN_CONTROLS, // play/pause
+                      RHAP_UI.VOLUME_CONTROLS, // volume (opcional)
+                    ]}
+                    layout="horizontal"
                   />
                 </Box>
-                
+
                 {listeners && (
                   <Stack direction="row" spacing={1} justifyContent={{ xs: 'center', sm: 'flex-start' }} mt={2}>
-                    <Chip 
-                      icon={<EqualizerIcon sx={{fontSize: 16}} />} 
-                      label={`${listeners.current} Ouvintes`} 
+                    <Chip
+                      icon={<EqualizerIcon sx={{ fontSize: 16 }} />}
+                      label={`${listeners.current} Ouvintes`}
                       size="small"
-                      sx={{ bgcolor: 'rgba(0,0,0,0.3)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.05)' }} 
+                      sx={{
+                        bgcolor: 'rgba(0,0,0,0.3)',
+                        color: '#94a3b8',
+                        border: '1px solid rgba(255,255,255,0.05)',
+                      }}
                     />
                   </Stack>
                 )}
@@ -728,183 +721,193 @@ function MusicRequestQueuePage() {
             </Stack>
           </GlassCard>
 
-          <Stack direction={{xs: 'column', md: 'row'}} spacing={4}>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={4}>
             {/* COLUNA DA ESQUERDA: BUSCA & RESULTADOS */}
             <Box sx={{ flex: 1 }}>
-               <Typography variant="h6" fontWeight={800} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#fff' }}>
-                  <SearchIcon sx={{ color: '#ec4899' }} /> FAÇA SEU PEDIDO
-               </Typography>
+              <Typography
+                variant="h6"
+                fontWeight={800}
+                sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#fff' }}
+              >
+                <SearchIcon sx={{ color: '#ec4899' }} /> FAÇA SEU PEDIDO
+              </Typography>
 
-               <GlassCard sx={{ p: 2, mb: 3 }}>
-                 <form onSubmit={handleSearch}>
-                    <Stack direction="row" spacing={1}>
-                      <TextField
-                        fullWidth
-                        placeholder="Nome da música ou artista..."
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        disabled={searching}
-                        variant="outlined"
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            color: '#fff',
-                            bgcolor: 'rgba(0,0,0,0.2)',
-                            borderRadius: '12px',
-                            '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
-                            '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
-                            '&.Mui-focused fieldset': { borderColor: '#ec4899' },
-                          }
-                        }}
-                      />
-                      <Button
-                        type="submit"
-                        variant="contained"
-                        disabled={searching}
-                        sx={{
+              <GlassCard sx={{ p: 2, mb: 3 }}>
+                <form onSubmit={handleSearch}>
+                  <Stack direction="row" spacing={1}>
+                    <TextField
+                      fullWidth
+                      placeholder="Nome da música ou artista..."
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      disabled={searching}
+                      variant="outlined"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          color: '#fff',
+                          bgcolor: 'rgba(0,0,0,0.2)',
                           borderRadius: '12px',
-                          background: 'linear-gradient(135deg, #ec4899, #db2777)',
-                          minWidth: 60,
-                          boxShadow: '0 4px 12px rgba(236, 72, 153, 0.4)'
-                        }}
-                      >
-                        {searching ? <CircularProgress size={24} color="inherit" /> : <SearchIcon />}
-                      </Button>
-                    </Stack>
-                 </form>
-               </GlassCard>
-
-               {error && <Alert severity="error" variant="filled" sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>}
-
-               <Stack spacing={2}>
-                  {searchResults.map((track) => (
-                    <GlassCard 
-                      key={track.videoId} 
-                      sx={{ 
-                        p: 0, 
-                        display: 'flex', 
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        transition: 'transform 0.2s',
-                        '&:hover': { transform: 'translateY(-4px)', borderColor: '#ec4899' }
+                          '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+                          '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
+                          '&.Mui-focused fieldset': { borderColor: '#ec4899' },
+                        },
+                      }}
+                    />
+                    <Button
+                      type="submit"
+                      variant="contained"
+                      disabled={searching}
+                      sx={{
+                        borderRadius: '12px',
+                        background: 'linear-gradient(135deg, #ec4899, #db2777)',
+                        minWidth: 60,
+                        boxShadow: '0 4px 12px rgba(236, 72, 153, 0.4)',
                       }}
                     >
-                      <Box 
-                        component="img" 
-                        src={getYTCoverUrl(track)} 
-                        sx={{ width: 80, height: 80, objectFit: 'cover' }}
-                      />
-                      <Box sx={{ p: 2, flex: 1, minWidth: 0 }}>
-                        <Typography variant="subtitle2" fontWeight={700} noWrap sx={{ color: '#fff' }}>
-                          {track.title}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: '#94a3b8' }}>
-                          {getYTArtistText(track)}
-                        </Typography>
-                      </Box>
-                      <IconButton 
-                        onClick={() => addingId ? null : handleAdd(track)}
-                        disabled={!!addingId}
-                        sx={{ 
-                          mr: 1,
-                          bgcolor: 'rgba(255,255,255,0.1)',
-                          color: '#ec4899',
-                          '&:hover': { bgcolor: '#ec4899', color: '#fff' }
-                        }}
-                      >
-                         {addingId === track.videoId ? <CircularProgress size={20} color="inherit" /> : <AddIcon />}
-                      </IconButton>
-                    </GlassCard>
-                  ))}
-               </Stack>
+                      {searching ? <CircularProgress size={24} color="inherit" /> : <SearchIcon />}
+                    </Button>
+                  </Stack>
+                </form>
+              </GlassCard>
+
+              {error && (
+                <Alert severity="error" variant="filled" sx={{ mb: 2, borderRadius: 2 }}>
+                  {error}
+                </Alert>
+              )}
+
+              <Stack spacing={2}>
+                {searchResults.map((track) => (
+                  <GlassCard
+                    key={track.videoId}
+                    sx={{
+                      p: 0,
+                      display: 'flex',
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      transition: 'transform 0.2s',
+                      '&:hover': { transform: 'translateY(-4px)', borderColor: '#ec4899' },
+                    }}
+                  >
+                    <Box component="img" src={getYTCoverUrl(track)} sx={{ width: 80, height: 80, objectFit: 'cover' }} />
+                    <Box sx={{ p: 2, flex: 1, minWidth: 0 }}>
+                      <Typography variant="subtitle2" fontWeight={700} noWrap sx={{ color: '#fff' }}>
+                        {track.title}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                        {getYTArtistText(track)}
+                      </Typography>
+                    </Box>
+                    <IconButton
+                      onClick={() => (addingId ? null : handleAdd(track))}
+                      disabled={!!addingId}
+                      sx={{
+                        mr: 1,
+                        bgcolor: 'rgba(255,255,255,0.1)',
+                        color: '#ec4899',
+                        '&:hover': { bgcolor: '#ec4899', color: '#fff' },
+                      }}
+                    >
+                      {addingId === track.videoId ? <CircularProgress size={20} color="inherit" /> : <AddIcon />}
+                    </IconButton>
+                  </GlassCard>
+                ))}
+              </Stack>
             </Box>
 
             {/* COLUNA DA DIREITA: FILA */}
             <Box sx={{ flex: 1 }}>
-              <Typography variant="h6" fontWeight={800} sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#fff' }}>
-                  <QueueIcon sx={{ color: '#8b5cf6' }} /> FILA DE REPRODUÇÃO
-               </Typography>
+              <Typography
+                variant="h6"
+                fontWeight={800}
+                sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#fff' }}
+              >
+                <QueueIcon sx={{ color: '#8b5cf6' }} /> FILA DE REPRODUÇÃO
+              </Typography>
 
-               {queue.length === 0 ? (
-                 <Box sx={{ 
-                   p: 4, 
-                   border: '2px dashed rgba(255,255,255,0.1)', 
-                   borderRadius: 4, 
-                   textAlign: 'center',
-                   color: 'rgba(255,255,255,0.4)'
-                 }}>
-                   <Typography>A fila está vazia.</Typography>
-                   <Typography variant="caption">Seja o DJ e peça algo agora!</Typography>
-                 </Box>
-               ) : (
-                 <Stack spacing={1.5}>
-                   {queue.map((item, index) => (
-                     <GlassCard
-                        key={item.id}
-                        sx={{
-                          p: 1.5,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 2,
-                          background: index === 0 
+              {queue.length === 0 ? (
+                <Box
+                  sx={{
+                    p: 4,
+                    border: '2px dashed rgba(255,255,255,0.1)',
+                    borderRadius: 4,
+                    textAlign: 'center',
+                    color: 'rgba(255,255,255,0.4)',
+                  }}
+                >
+                  <Typography>A fila está vazia.</Typography>
+                  <Typography variant="caption">Seja o DJ e peça algo agora!</Typography>
+                </Box>
+              ) : (
+                <Stack spacing={1.5}>
+                  {queue.map((item, index) => (
+                    <GlassCard
+                      key={item.id}
+                      sx={{
+                        p: 1.5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        background:
+                          index === 0
                             ? 'linear-gradient(90deg, rgba(139, 92, 246, 0.2), rgba(20,20,30,0.6))'
                             : 'rgba(20, 20, 30, 0.4)',
-                          borderColor: index === 0 ? '#8b5cf6' : 'rgba(255,255,255,0.05)'
+                        borderColor: index === 0 ? '#8b5cf6' : 'rgba(255,255,255,0.05)',
+                      }}
+                    >
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          color: index === 0 ? '#c4b5fd' : 'rgba(255,255,255,0.2)',
+                          fontWeight: 900,
+                          minWidth: 24,
                         }}
-                     >
-                        <Typography 
-                          variant="h6" 
-                          sx={{ 
-                            color: index === 0 ? '#c4b5fd' : 'rgba(255,255,255,0.2)', 
-                            fontWeight: 900,
-                            minWidth: 24
-                          }}
-                        >
-                          {index + 1}
+                      >
+                        {index + 1}
+                      </Typography>
+                      <Avatar src={item.coverUrl || ''} variant="rounded" />
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="body2" fontWeight={700} noWrap sx={{ color: '#f8fafc' }}>
+                          {item.trackName}
                         </Typography>
-                        <Avatar src={item.coverUrl || ''} variant="rounded" />
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography variant="body2" fontWeight={700} noWrap sx={{ color: '#f8fafc' }}>
-                            {item.trackName}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: '#94a3b8' }}>
-                            {item.artistName}
-                          </Typography>
-                        </Box>
-                        {index === 0 && <Chip size="small" label="Next" color="primary" sx={{ height: 20, fontSize: '0.65rem' }} />}
-                     </GlassCard>
-                   ))}
-                 </Stack>
-               )}
+                        <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                          {item.artistName}
+                        </Typography>
+                      </Box>
+                      {index === 0 && <Chip size="small" label="Next" color="primary" sx={{ height: 20, fontSize: '0.65rem' }} />}
+                    </GlassCard>
+                  ))}
+                </Stack>
+              )}
             </Box>
           </Stack>
-          
+
           {/* HISTÓRICO HORIZONTAL */}
           {azura && azura.song_history.length > 0 && (
             <Box mt={6}>
-               <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 3 }} />
-               <Typography variant="overline" sx={{ color: 'rgba(255,255,255,0.5)', letterSpacing: 2 }}>
-                  Tocou Recentemente
-               </Typography>
-               <Stack direction="row" spacing={2} sx={{ overflowX: 'auto', py: 2, px: 1 }}>
-                  {azura.song_history.map(h => (
-                    <Box key={h.sh_id} sx={{ minWidth: 100, maxWidth: 100 }}>
-                       <Avatar 
-                        src={h.song.art || ''} 
-                        variant="rounded" 
-                        sx={{ width: 100, height: 100, mb: 1, borderRadius: 3, boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }} 
-                       />
-                       <Typography variant="caption" display="block" color="#e2e8f0" noWrap fontWeight={600}>
-                         {h.song.title}
-                       </Typography>
-                       <Typography variant="caption" display="block" color="rgba(255,255,255,0.5)" noWrap>
-                         {formatAzuraDate(h.played_at).split(' ')[1]}
-                       </Typography>
-                    </Box>
-                  ))}
-               </Stack>
+              <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 3 }} />
+              <Typography variant="overline" sx={{ color: 'rgba(255,255,255,0.5)', letterSpacing: 2 }}>
+                Tocou Recentemente
+              </Typography>
+              <Stack direction="row" spacing={2} sx={{ overflowX: 'auto', py: 2, px: 1 }}>
+                {azura.song_history.map((h) => (
+                  <Box key={h.sh_id} sx={{ minWidth: 100, maxWidth: 100 }}>
+                    <Avatar
+                      src={h.song.art || ''}
+                      variant="rounded"
+                      sx={{ width: 100, height: 100, mb: 1, borderRadius: 3, boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}
+                    />
+                    <Typography variant="caption" display="block" color="#e2e8f0" noWrap fontWeight={600}>
+                      {h.song.title}
+                    </Typography>
+                    <Typography variant="caption" display="block" color="rgba(255,255,255,0.5)" noWrap>
+                      {formatAzuraDate(h.played_at).split(' ')[1]}
+                    </Typography>
+                  </Box>
+                ))}
+              </Stack>
             </Box>
           )}
-
         </Container>
       </Box>
     </>
