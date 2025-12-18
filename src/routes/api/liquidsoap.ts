@@ -311,17 +311,6 @@ async function ensurePrefill(prisma: any) {
   const need = Math.max(0, TARGET_UNDELIVERED_BEFORE_DELIVER - undeliveredCount)
   if (need === 0) return
 
-  const seed =
-    (await prisma.radioRequest.findFirst({
-      where: { deleteAt: null },
-      orderBy: { createdAt: 'desc' },
-      select: { trackName: true, artistName: true },
-    })) ||
-    (await prisma.radioRequest.findFirst({
-      orderBy: { createdAt: 'desc' },
-      select: { trackName: true, artistName: true },
-    }))
-
   // último tocado = maior deleteAt (como deleteAt = deliveredAt + 10min, serve bem)
   const lastPlayed =
     (await prisma.radioRequest.findFirst({
@@ -334,15 +323,12 @@ async function ensurePrefill(prisma: any) {
       select: { trackName: true },
     }))
 
-  const lastTitleKey = normalizeTrackName(lastPlayed?.trackName ?? '')
-
-  const prompt = seed?.artistName ? buildPromptFromArtist(seed.artistName) : 'popular songs'
-  const lbTracks = await fetchLbRadio(prompt, 'easy')
+  const lbTracks = await fetchLbRadio(lastPlayed.trackName, 'easy')
 
   let inserted = 0
   const seenComboKeys = new Set<string>()
 
-  for (const t of lbTracks.slice(0, 25)) {
+  for (const t of lbTracks) {
     if (inserted >= need) break
 
     const title = (t?.title ?? '').trim()
