@@ -19,12 +19,10 @@ import {
   CircularProgress,
   Container,
   Divider,
-  FormControl, // Mantido caso precise futuramente, mas não usado visivelmente agora
   GlobalStyles,
   IconButton,
-  Menu, // <--- NOVO
+  Menu,
   MenuItem,
-  Select, // Mantido caso precise
   Stack,
   Switch,
   TextField,
@@ -34,12 +32,12 @@ import {
 
 import {
   Add as AddIcon,
-  Check as CheckIcon, // <--- NOVO
+  Check as CheckIcon,
   Equalizer as EqualizerIcon,
   QueueMusic as QueueIcon,
   Radio as RadioIcon,
   Search as SearchIcon,
-  Settings as SettingsIcon, // <--- NOVO
+  Settings as SettingsIcon,
 } from '@mui/icons-material'
 
 /**  ANIMAÇÕES CSS (Keyframes) */
@@ -187,11 +185,11 @@ type RadioRequestItem = {
 const AZURA_NOWPLAYING_URL = 'https://webradio.dpdns.org/api/nowplaying/j'
 const YTMUSIC_SEARCH_ENDPOINT = '/api/ytmusic-search'
 
-// ✅ SUA URL HLS FIXA
+// SUA URL HLS FIXA
 const HLS_STREAM_URL = 'https://webradio.dpdns.org/hls/j/live.m3u8'
 
-// ✅ Seus parâmetros de servidor
-const HLS_SEGMENT_DURATION_SECONDS = 4
+// Seus parâmetros de servidor
+const HLS_SEGMENT_DURATION_SECONDS = 2
 const HLS_PLAYLIST_SEGMENTS = 30
 // const HLS_OVERHEAD_SEGMENTS = 15
 
@@ -239,14 +237,18 @@ async function searchYouTubeMusic(query: string, limit = 8): Promise<YTMusicSear
   return (data?.items ?? []) as YTMusicSearchItem[]
 }
 
-/**  ROUTE  */
-
 export const Route = createFileRoute('/')({
   ssr: false,
   component: MusicRequestQueuePage,
   loader: async () => {
     try {
-      const res = await fetch('/api/queue')
+      const res = await fetch('/api/queue', {
+        cache: 'no-store',
+        headers: {
+          Accept: 'application/json',
+          'Cache-Control': 'no-store',
+        },
+      })
       if (!res.ok) return { queue: [] as RadioRequestItem[] }
       const queue = (await res.json()) as RadioRequestItem[]
       return { queue }
@@ -255,6 +257,7 @@ export const Route = createFileRoute('/')({
     }
   },
 })
+
 
 /**  COMPONENTES VISUAIS CUSTOMIZADOS  */
 
@@ -322,7 +325,6 @@ function MusicRequestQueuePage() {
   const handleSettingsClose = () => {
     setSettingsAnchorEl(null)
   }
-  // ---------------------------
 
   const playerRef = useRef<any>(null)
 
@@ -454,7 +456,7 @@ function MusicRequestQueuePage() {
   const mounts = azura?.station?.mounts ?? []
 
   /**
-   * ✅ Escolha da URL do stream
+   *  Escolha da URL do stream
    */
   const streamSrc = useMemo(() => {
     // Se usuário escolheu HLS fixo
@@ -475,7 +477,7 @@ function MusicRequestQueuePage() {
   }, [azura, mounts, selectedMountId])
 
   /**
-   * ✅ Cache-buster
+   *  Cache-buster
    */
   const effectiveStreamSrc = useMemo(() => {
     if (!streamSrc) return undefined
