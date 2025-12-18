@@ -1,41 +1,56 @@
+# 1. Instalação de dependências
 FROM node:lts-alpine AS deps
 WORKDIR /app
 
-RUN corepack enable
+# Copia package.json e package-lock.json (se existir)
+COPY package.json package-lock.json* ./
 
-COPY package.json pnpm-lock.yaml* ./
-RUN pnpm install --frozen-lockfile
+# Instala dependências usando npm
+# Usamos 'npm install' em vez de 'ci' para funcionar mesmo sem lockfile
+RUN npm install
 
-# build
+# 2. Build da aplicação
 FROM node:lts-alpine AS build
 WORKDIR /app
 
-RUN corepack enable
+# Instala dependências nativas necessárias para compilação no Alpine
+# RUN apk add --no-cache python3 make g++
 
-# Dependências nativas (ex.: better-sqlite3)
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends python3 make g++ \
-  && rm -rf /var/lib/apt/lists/*
-
+# Copia as dependências baixadas na etapa anterior
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-RUN pnpm run build
-RUN pnpm prune --prod
+# Se estiver usando Prisma, descomente a linha abaixo:
+# RUN npx prisma generate
 
-# runner
+# Roda o build da aplicação
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+
+RUN npm run build
+
+# Remove dependências de desenvolvimento para limpar a imagem
+RUN npm prune --production
+
+# 3. Imagem final (Runner)
 FROM node:lts-alpine AS runner
 WORKDIR /app
+
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# usuário não-root
-RUN useradd -m appuser
+# Cria usuário não-root (Padrão Alpine: addgroup/adduser)
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Copia os arquivos gerados no build com as permissões corretas
+COPY --from=build --chown=appuser:appgroup /app/node_modules ./node_modules
+COPY --from=build --chown=appuser:appgroup /app/.output ./.output
+COPY --from=build --chown=appuser:appgroup /app/package.json ./package.json
+
+# Se tiver pasta prisma, descomente:
+# COPY --from=build --chown=appuser:appgroup /app/prisma ./prisma
+
 USER appuser
 
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/.output ./.output
-COPY --from=build /app/prisma ./prisma
-
 EXPOSE 3000
+
 CMD ["node", ".output/server/index.mjs"]
