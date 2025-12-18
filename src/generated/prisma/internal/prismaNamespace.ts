@@ -526,7 +526,8 @@ export const RadioRequestScalarFieldEnum = {
   coverUrl: 'coverUrl',
   youtubeUrl: 'youtubeUrl',
   createdAt: 'createdAt',
-  deleteAt: 'deleteAt'
+  deleteAt: 'deleteAt',
+  durationSec: 'durationSec'
 } as const
 
 export type RadioRequestScalarFieldEnum = (typeof RadioRequestScalarFieldEnum)[keyof typeof RadioRequestScalarFieldEnum]
@@ -601,6 +602,20 @@ export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'In
  * Reference to a field of type 'Int[]'
  */
 export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Float'
+ */
+export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
+    
+
+
+/**
+ * Reference to a field of type 'Float[]'
+ */
+export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
     
 
 /**

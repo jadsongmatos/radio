@@ -81,7 +81,7 @@ type RadioRequestItem = {
   coverUrl?: string | null
   youtubeUrl: string
   createdAt: string
-  durationSec: number // ✅ NEW
+  durationSec: number // NEW
 }
 
 /**  CONSTANTS / HELPERS  */
@@ -106,7 +106,6 @@ function getYTCoverUrl(item: YTMusicSearchItem) {
   return item.thumbnailUrl || `https://i.ytimg.com/vi/${item.videoId}/hqdefault.jpg`
 }
 
-// ✅ NEW: duration helpers (frontend)
 function parseDurationTextToSec(s?: string | null) {
   if (!s) return null
   const parts = s
@@ -219,7 +218,7 @@ function MusicRequestQueuePage() {
   const initialQueue = loaderData.queue ?? []
   const queue = useMemo(() => initialQueue ?? [], [initialQueue])
 
-  // ✅ NEW: total + ETA
+  // NEW: total + ETA
   const queueTotalSec = useMemo(
     () => queue.reduce((sum, it) => sum + (it.durationSec ?? 0), 0),
     [queue],
@@ -265,7 +264,7 @@ function MusicRequestQueuePage() {
     setAddingId(track.videoId)
     setError(null)
     try {
-      const durationSec = parseDurationTextToSec(track.durationText) ?? 0 // ✅ NEW
+      const durationSec = parseDurationTextToSec(track.durationText) ?? 0 // NEW
 
       const res = await fetch('/api/queue', {
         method: 'POST',
@@ -277,7 +276,7 @@ function MusicRequestQueuePage() {
           albumName: track.album,
           coverUrl: getYTCoverUrl(track),
           youtubeUrl: track.youtubeUrl,
-          durationSec, // ✅ NEW
+          durationSec, // NEW
         }),
       })
       if (!res.ok) throw new Error()
@@ -441,10 +440,7 @@ function MusicRequestQueuePage() {
               }}
             />
           </Stack>
-
-          {/* ✅ PLAYER agora só recebe azura */}
           <RadioPlayerCard azura={azura} />
-
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={4}>
             {/* ESQUERDA */}
             <Box sx={{ flex: 1 }}>
@@ -541,7 +537,6 @@ function MusicRequestQueuePage() {
 
             {/* DIREITA */}
             <Box sx={{ flex: 1 }}>
-              {/* ✅ NEW: header com total */}
               <Stack direction="row" alignItems="baseline" justifyContent="space-between" sx={{ mb: 2 }}>
                 <Typography
                   variant="h6"
@@ -610,7 +605,7 @@ function MusicRequestQueuePage() {
                         </Typography>
                       </Box>
 
-                      {/* ✅ NEW: duração + ETA + Next */}
+                      {/* NEW: duração + ETA + Next */}
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Chip
                           size="small"

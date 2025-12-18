@@ -20,7 +20,7 @@ const config: runtime.GetPrismaClientConfig = {
   "clientVersion": "7.1.0",
   "engineVersion": "ab635e6b9d606fa5c8fb8b1a7f909c3c3c1c98ba",
   "activeProvider": "postgresql",
-  "inlineSchema": "generator client {\n  provider = \"prisma-client\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  // provider = \"sqlite\"\n  provider = \"postgresql\"\n}\n\nmodel RadioRequest {\n  id            String    @id @default(cuid())\n  recordingMbid String\n  trackName     String\n  artistName    String\n  releaseName   String?\n  coverUrl      String?\n  youtubeUrl    String\n  createdAt     DateTime  @default(now())\n  deleteAt      DateTime? @map(\"delete_at\")\n\n  @@index([createdAt])\n  @@index([deleteAt])\n}\n",
+  "inlineSchema": "generator client {\n  provider = \"prisma-client\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  // provider = \"sqlite\"\n  provider = \"postgresql\"\n}\n\nmodel RadioRequest {\n  id            String    @id @default(cuid())\n  recordingMbid String\n  trackName     String\n  artistName    String\n  releaseName   String?\n  coverUrl      String?\n  youtubeUrl    String\n  createdAt     DateTime  @default(now())\n  deleteAt      DateTime?\n  durationSec   Int\n\n  @@index([createdAt])\n  @@index([deleteAt])\n}\n",
   "runtimeDataModel": {
     "models": {},
     "enums": {},
@@ -28,7 +28,7 @@ const config: runtime.GetPrismaClientConfig = {
   }
 }
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"RadioRequest\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"recordingMbid\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"trackName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"artistName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"releaseName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"coverUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"youtubeUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"deleteAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"delete_at\"}],\"dbName\":null}},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"RadioRequest\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"recordingMbid\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"trackName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"artistName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"releaseName\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"coverUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"youtubeUrl\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"deleteAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"durationSec\",\"kind\":\"scalar\",\"type\":\"Int\"}],\"dbName\":null}},\"enums\":{},\"types\":{}}")
 
 async function decodeBase64AsWasm(wasmBase64: string): Promise<WebAssembly.Module> {
   const { Buffer } = await import('node:buffer')

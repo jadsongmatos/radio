@@ -20,8 +20,18 @@ export type RadioRequestModel = runtime.Types.Result.DefaultSelection<Prisma.$Ra
 
 export type AggregateRadioRequest = {
   _count: RadioRequestCountAggregateOutputType | null
+  _avg: RadioRequestAvgAggregateOutputType | null
+  _sum: RadioRequestSumAggregateOutputType | null
   _min: RadioRequestMinAggregateOutputType | null
   _max: RadioRequestMaxAggregateOutputType | null
+}
+
+export type RadioRequestAvgAggregateOutputType = {
+  durationSec: number | null
+}
+
+export type RadioRequestSumAggregateOutputType = {
+  durationSec: number | null
 }
 
 export type RadioRequestMinAggregateOutputType = {
@@ -34,6 +44,7 @@ export type RadioRequestMinAggregateOutputType = {
   youtubeUrl: string | null
   createdAt: Date | null
   deleteAt: Date | null
+  durationSec: number | null
 }
 
 export type RadioRequestMaxAggregateOutputType = {
@@ -46,6 +57,7 @@ export type RadioRequestMaxAggregateOutputType = {
   youtubeUrl: string | null
   createdAt: Date | null
   deleteAt: Date | null
+  durationSec: number | null
 }
 
 export type RadioRequestCountAggregateOutputType = {
@@ -58,9 +70,18 @@ export type RadioRequestCountAggregateOutputType = {
   youtubeUrl: number
   createdAt: number
   deleteAt: number
+  durationSec: number
   _all: number
 }
 
+
+export type RadioRequestAvgAggregateInputType = {
+  durationSec?: true
+}
+
+export type RadioRequestSumAggregateInputType = {
+  durationSec?: true
+}
 
 export type RadioRequestMinAggregateInputType = {
   id?: true
@@ -72,6 +93,7 @@ export type RadioRequestMinAggregateInputType = {
   youtubeUrl?: true
   createdAt?: true
   deleteAt?: true
+  durationSec?: true
 }
 
 export type RadioRequestMaxAggregateInputType = {
@@ -84,6 +106,7 @@ export type RadioRequestMaxAggregateInputType = {
   youtubeUrl?: true
   createdAt?: true
   deleteAt?: true
+  durationSec?: true
 }
 
 export type RadioRequestCountAggregateInputType = {
@@ -96,6 +119,7 @@ export type RadioRequestCountAggregateInputType = {
   youtubeUrl?: true
   createdAt?: true
   deleteAt?: true
+  durationSec?: true
   _all?: true
 }
 
@@ -137,6 +161,18 @@ export type RadioRequestAggregateArgs<ExtArgs extends runtime.Types.Extensions.I
   /**
    * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
    * 
+   * Select which fields to average
+  **/
+  _avg?: RadioRequestAvgAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
+   * Select which fields to sum
+  **/
+  _sum?: RadioRequestSumAggregateInputType
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+   * 
    * Select which fields to find the minimum value
   **/
   _min?: RadioRequestMinAggregateInputType
@@ -167,6 +203,8 @@ export type RadioRequestGroupByArgs<ExtArgs extends runtime.Types.Extensions.Int
   take?: number
   skip?: number
   _count?: RadioRequestCountAggregateInputType | true
+  _avg?: RadioRequestAvgAggregateInputType
+  _sum?: RadioRequestSumAggregateInputType
   _min?: RadioRequestMinAggregateInputType
   _max?: RadioRequestMaxAggregateInputType
 }
@@ -181,7 +219,10 @@ export type RadioRequestGroupByOutputType = {
   youtubeUrl: string
   createdAt: Date
   deleteAt: Date | null
+  durationSec: number
   _count: RadioRequestCountAggregateOutputType | null
+  _avg: RadioRequestAvgAggregateOutputType | null
+  _sum: RadioRequestSumAggregateOutputType | null
   _min: RadioRequestMinAggregateOutputType | null
   _max: RadioRequestMaxAggregateOutputType | null
 }
@@ -214,6 +255,7 @@ export type RadioRequestWhereInput = {
   youtubeUrl?: Prisma.StringFilter<"RadioRequest"> | string
   createdAt?: Prisma.DateTimeFilter<"RadioRequest"> | Date | string
   deleteAt?: Prisma.DateTimeNullableFilter<"RadioRequest"> | Date | string | null
+  durationSec?: Prisma.IntFilter<"RadioRequest"> | number
 }
 
 export type RadioRequestOrderByWithRelationInput = {
@@ -226,6 +268,7 @@ export type RadioRequestOrderByWithRelationInput = {
   youtubeUrl?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   deleteAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  durationSec?: Prisma.SortOrder
 }
 
 export type RadioRequestWhereUniqueInput = Prisma.AtLeast<{
@@ -241,6 +284,7 @@ export type RadioRequestWhereUniqueInput = Prisma.AtLeast<{
   youtubeUrl?: Prisma.StringFilter<"RadioRequest"> | string
   createdAt?: Prisma.DateTimeFilter<"RadioRequest"> | Date | string
   deleteAt?: Prisma.DateTimeNullableFilter<"RadioRequest"> | Date | string | null
+  durationSec?: Prisma.IntFilter<"RadioRequest"> | number
 }, "id">
 
 export type RadioRequestOrderByWithAggregationInput = {
@@ -253,9 +297,12 @@ export type RadioRequestOrderByWithAggregationInput = {
   youtubeUrl?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   deleteAt?: Prisma.SortOrderInput | Prisma.SortOrder
+  durationSec?: Prisma.SortOrder
   _count?: Prisma.RadioRequestCountOrderByAggregateInput
+  _avg?: Prisma.RadioRequestAvgOrderByAggregateInput
   _max?: Prisma.RadioRequestMaxOrderByAggregateInput
   _min?: Prisma.RadioRequestMinOrderByAggregateInput
+  _sum?: Prisma.RadioRequestSumOrderByAggregateInput
 }
 
 export type RadioRequestScalarWhereWithAggregatesInput = {
@@ -271,6 +318,7 @@ export type RadioRequestScalarWhereWithAggregatesInput = {
   youtubeUrl?: Prisma.StringWithAggregatesFilter<"RadioRequest"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"RadioRequest"> | Date | string
   deleteAt?: Prisma.DateTimeNullableWithAggregatesFilter<"RadioRequest"> | Date | string | null
+  durationSec?: Prisma.IntWithAggregatesFilter<"RadioRequest"> | number
 }
 
 export type RadioRequestCreateInput = {
@@ -283,6 +331,7 @@ export type RadioRequestCreateInput = {
   youtubeUrl: string
   createdAt?: Date | string
   deleteAt?: Date | string | null
+  durationSec: number
 }
 
 export type RadioRequestUncheckedCreateInput = {
@@ -295,6 +344,7 @@ export type RadioRequestUncheckedCreateInput = {
   youtubeUrl: string
   createdAt?: Date | string
   deleteAt?: Date | string | null
+  durationSec: number
 }
 
 export type RadioRequestUpdateInput = {
@@ -307,6 +357,7 @@ export type RadioRequestUpdateInput = {
   youtubeUrl?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deleteAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  durationSec?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type RadioRequestUncheckedUpdateInput = {
@@ -319,6 +370,7 @@ export type RadioRequestUncheckedUpdateInput = {
   youtubeUrl?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deleteAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  durationSec?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type RadioRequestCreateManyInput = {
@@ -331,6 +383,7 @@ export type RadioRequestCreateManyInput = {
   youtubeUrl: string
   createdAt?: Date | string
   deleteAt?: Date | string | null
+  durationSec: number
 }
 
 export type RadioRequestUpdateManyMutationInput = {
@@ -343,6 +396,7 @@ export type RadioRequestUpdateManyMutationInput = {
   youtubeUrl?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deleteAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  durationSec?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type RadioRequestUncheckedUpdateManyInput = {
@@ -355,6 +409,7 @@ export type RadioRequestUncheckedUpdateManyInput = {
   youtubeUrl?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   deleteAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  durationSec?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
 export type RadioRequestCountOrderByAggregateInput = {
@@ -367,6 +422,11 @@ export type RadioRequestCountOrderByAggregateInput = {
   youtubeUrl?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   deleteAt?: Prisma.SortOrder
+  durationSec?: Prisma.SortOrder
+}
+
+export type RadioRequestAvgOrderByAggregateInput = {
+  durationSec?: Prisma.SortOrder
 }
 
 export type RadioRequestMaxOrderByAggregateInput = {
@@ -379,6 +439,7 @@ export type RadioRequestMaxOrderByAggregateInput = {
   youtubeUrl?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   deleteAt?: Prisma.SortOrder
+  durationSec?: Prisma.SortOrder
 }
 
 export type RadioRequestMinOrderByAggregateInput = {
@@ -391,6 +452,11 @@ export type RadioRequestMinOrderByAggregateInput = {
   youtubeUrl?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   deleteAt?: Prisma.SortOrder
+  durationSec?: Prisma.SortOrder
+}
+
+export type RadioRequestSumOrderByAggregateInput = {
+  durationSec?: Prisma.SortOrder
 }
 
 export type StringFieldUpdateOperationsInput = {
@@ -409,6 +475,14 @@ export type NullableDateTimeFieldUpdateOperationsInput = {
   set?: Date | string | null
 }
 
+export type IntFieldUpdateOperationsInput = {
+  set?: number
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
 
 
 export type RadioRequestSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -421,6 +495,7 @@ export type RadioRequestSelect<ExtArgs extends runtime.Types.Extensions.Internal
   youtubeUrl?: boolean
   createdAt?: boolean
   deleteAt?: boolean
+  durationSec?: boolean
 }, ExtArgs["result"]["radioRequest"]>
 
 export type RadioRequestSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -433,6 +508,7 @@ export type RadioRequestSelectCreateManyAndReturn<ExtArgs extends runtime.Types.
   youtubeUrl?: boolean
   createdAt?: boolean
   deleteAt?: boolean
+  durationSec?: boolean
 }, ExtArgs["result"]["radioRequest"]>
 
 export type RadioRequestSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -445,6 +521,7 @@ export type RadioRequestSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.
   youtubeUrl?: boolean
   createdAt?: boolean
   deleteAt?: boolean
+  durationSec?: boolean
 }, ExtArgs["result"]["radioRequest"]>
 
 export type RadioRequestSelectScalar = {
@@ -457,9 +534,10 @@ export type RadioRequestSelectScalar = {
   youtubeUrl?: boolean
   createdAt?: boolean
   deleteAt?: boolean
+  durationSec?: boolean
 }
 
-export type RadioRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "recordingMbid" | "trackName" | "artistName" | "releaseName" | "coverUrl" | "youtubeUrl" | "createdAt" | "deleteAt", ExtArgs["result"]["radioRequest"]>
+export type RadioRequestOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "recordingMbid" | "trackName" | "artistName" | "releaseName" | "coverUrl" | "youtubeUrl" | "createdAt" | "deleteAt" | "durationSec", ExtArgs["result"]["radioRequest"]>
 
 export type $RadioRequestPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "RadioRequest"
@@ -474,6 +552,7 @@ export type $RadioRequestPayload<ExtArgs extends runtime.Types.Extensions.Intern
     youtubeUrl: string
     createdAt: Date
     deleteAt: Date | null
+    durationSec: number
   }, ExtArgs["result"]["radioRequest"]>
   composites: {}
 }
@@ -906,6 +985,7 @@ export interface RadioRequestFieldRefs {
   readonly youtubeUrl: Prisma.FieldRef<"RadioRequest", 'String'>
   readonly createdAt: Prisma.FieldRef<"RadioRequest", 'DateTime'>
   readonly deleteAt: Prisma.FieldRef<"RadioRequest", 'DateTime'>
+  readonly durationSec: Prisma.FieldRef<"RadioRequest", 'Int'>
 }
     
 

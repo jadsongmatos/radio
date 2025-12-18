@@ -79,7 +79,8 @@ export const RadioRequestScalarFieldEnum = {
   coverUrl: 'coverUrl',
   youtubeUrl: 'youtubeUrl',
   createdAt: 'createdAt',
-  deleteAt: 'deleteAt'
+  deleteAt: 'deleteAt',
+  durationSec: 'durationSec'
 } as const
 
 export type RadioRequestScalarFieldEnum = (typeof RadioRequestScalarFieldEnum)[keyof typeof RadioRequestScalarFieldEnum]
