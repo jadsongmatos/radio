@@ -1,30 +1,11 @@
 // src/routes/api/liquidsoap.ts
 import { createFileRoute } from '@tanstack/react-router'
 
-/**
- * Endpoint “pronto pro AzuraCast”:
- * - GET /api/liquidsoap
- * - Retorna SEMPRE uma única linha em text/plain:
- *     youtube-dl:https://music.youtube.com/watch?v=VIDEO_ID
- *
- * Regras (com TTL):
- * - Fila = RadioRequest com deleteAt = null
- * - A API do Liquidsoap:
- *   0) remove do banco tudo que estiver vencido (deleteAt <= now)
- *   1) tenta fazer prefill quando a fila está baixa (0/1)
- *   2) entrega SEMPRE o mais antigo (createdAt asc)
- *   3) quando “entrega”, seta deleteAt = now + 10 minutos (momento em que deve ser apagado)
- *
- * Requisitos no Prisma:
- * - adicione `deleteAt DateTime?` no model RadioRequest (null = na fila)
- */
-
 const LISTENBRAINZ_LB_RADIO = 'https://api.listenbrainz.org/1/explore/lb-radio'
 
-// opcional: se existir, manda Authorization; se não, tenta sem
 const LB_TOKEN = process.env.LISTENBRAINZ_TOKEN || ''
 const LB_USER_AGENT =
-  process.env.LISTENBRAINZ_USER_AGENT || 'MyRadio/1.0 (admin@localhost)'
+  process.env.LISTENBRAINZ_USER_AGENT || 'MyRadio/1.0 (jadson.g-matos@oultook.com)'
 
 // Queremos garantir que, antes de entregar 1, existam pelo menos 2 pendentes.
 // Assim, depois de marcar 1 como entregue, ainda sobra 1 na fila.
@@ -80,10 +61,113 @@ async function getYT() {
   return ytPromise
 }
 
-function pickLargestThumbUrl(thumbnails: any): string | null {
-  const arr = Array.isArray(thumbnails) ? thumbnails : []
-  const last = arr[arr.length - 1]
-  return typeof last?.url === 'string' ? last.url : null
+type Thumb = { url?: string; width?: number; height?: number }
+
+/**
+ * Escolhe a melhor "capa" com heurística:
+ * - prefere thumbs quadradas (ou quase)
+ * - penaliza 16:9
+ * - prefere googleusercontent (muito comum pra album art)
+ * - evita i.ytimg.com (geralmente thumb de vídeo)
+ */
+function pickBestCoverThumbUrl(thumbnails: any): string | null {
+  const arr: Array<Thumb> = Array.isArray(thumbnails)
+    ? thumbnails
+    : Array.isArray(thumbnails?.thumbnails)
+      ? thumbnails.thumbnails
+      : []
+
+  let best: { url: string; score: number } | null = null
+
+  for (const t of arr) {
+    const url = typeof t?.url === 'string' ? t.url : null
+    const w = Number(t?.width ?? 0)
+    const h = Number(t?.height ?? 0)
+    if (!url) continue
+
+    // se não tiver dimensões, ainda dá pra ranquear por domínio
+    const hasDims = w > 0 && h > 0
+    const ratio = hasDims ? w / h : 1
+
+    const isSquareish = hasDims ? Math.abs(ratio - 1) <= 0.15 : false
+    const isVideoish = hasDims ? ratio >= 1.55 && ratio <= 2.05 : false
+
+    const isGoogle = /googleusercontent\.com|lh3\.googleusercontent\.com/i.test(url)
+    const isYtImg = /i\.ytimg\.com/i.test(url)
+
+    let score = hasDims ? w * h : 1
+
+    if (isSquareish) score *= 3
+    if (isVideoish) score *= 0.2
+
+    if (isGoogle) score *= 2
+    if (isYtImg) score *= 0.8
+
+    // bônus leve se parecer "capa" pelo caminho
+    if (/=s\d+/i.test(url) || /w\d+-h\d+/i.test(url)) score *= 1.1
+
+    if (!best || score > best.score) best = { url, score }
+  }
+
+  return best?.url ?? null
+}
+
+function isProbablyVideoThumbUrl(url: string) {
+  const u = (url ?? '').toLowerCase()
+  return (
+    u.includes('i.ytimg.com/vi/') ||
+    u.includes('/hqdefault') ||
+    u.includes('/mqdefault') ||
+    u.includes('/sddefault') ||
+    u.includes('/maxresdefault')
+  )
+}
+
+// opcional: “upscale” de googleusercontent para evitar capas pequenas
+function upscaleGoogleThumb(url: string, size = 800) {
+  if (!/googleusercontent\.com|lh3\.googleusercontent\.com/i.test(url)) return url
+
+  if (url.includes('=s')) return url.replace(/=s\d+/i, `=s${size}`)
+  if (url.includes('=w') && url.includes('-h')) {
+    return url.replace(/=w\d+-h\d+/i, `=w${size}-h${size}`)
+  }
+  return `${url}=s${size}`
+}
+
+async function getBetterCoverFromTrackInfo(videoId: string): Promise<string | null> {
+  try {
+    const yt = await getYT()
+    const info = await yt.music.getInfo(videoId)
+
+    // dependendo da versão, thumbnail pode estar em basic_info.thumbnail ou dentro de thumbnails
+    const cover =
+      pickBestCoverThumbUrl(info?.basic_info?.thumbnail) ||
+      pickBestCoverThumbUrl(info?.basic_info?.thumbnail?.thumbnails) ||
+      null
+
+    return cover ? upscaleGoogleThumb(cover, 800) : null
+  } catch {
+    return null
+  }
+}
+
+async function resolveCoverUrlForCandidate(it: any, videoId: string): Promise<string | null> {
+  // 1) tenta usar thumb do resultado de busca (rápido)
+  let cover =
+    pickBestCoverThumbUrl(it?.thumbnails) ||
+    pickBestCoverThumbUrl(it?.thumbnail?.thumbnails) ||
+    null
+
+  // 2) se não vier nada OU parecer thumb de vídeo, tenta melhorar com TrackInfo
+  if (!cover || isProbablyVideoThumbUrl(cover)) {
+    const better = await getBetterCoverFromTrackInfo(videoId)
+    if (better) cover = better
+  }
+
+  // 3) se for googleusercontent, tenta upscale
+  if (cover) cover = upscaleGoogleThumb(cover, 800)
+
+  return cover
 }
 
 // Bloqueia “ao vivo” de forma conservadora (evita pegar “Live Forever”, etc.)
@@ -143,23 +227,21 @@ async function searchYouTubeMusicFirstSong(query: string): Promise<YtResolved | 
         (typeof it?.album?.name === 'string' && it.album.name) ||
         (typeof it?.album?.title === 'string' && it.album.title)
 
-      const thumb =
-        pickLargestThumbUrl(it?.thumbnails) ||
-        pickLargestThumbUrl(it?.thumbnail?.thumbnails) ||
-        null
-
       if (!videoId || !title || !artistName) continue
       if (isLikelyLiveRecording(title, albumName ?? null)) continue
 
-      const youtubeUrl = `https://music.youtube.com/watch?v=${encodeURIComponent(videoId)}`
+      const youtubeUrl = `https://youtube.com/watch?v=${encodeURIComponent(videoId)}`
       if (!isValidYouTubeUrl(youtubeUrl)) continue
+
+      // >>> capa melhorada aqui <<<
+      const thumb = await resolveCoverUrlForCandidate(it, videoId)
 
       return {
         videoId,
         title,
         artistName,
         albumName: albumName ?? null,
-        thumbnailUrl: thumb ?? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+        thumbnailUrl: thumb ?? null, // sem fallback de thumb de vídeo
         youtubeUrl,
       }
     }
@@ -210,9 +292,6 @@ async function fetchLbRadio(prompt: string, mode: 'easy' | 'medium' | 'hard' = '
   }
 }
 
-/**
- * Remove músicas vencidas: deleteAt <= now
- */
 async function cleanupExpired(prisma: any) {
   const now = new Date()
   await prisma.radioRequest.deleteMany({
@@ -220,14 +299,6 @@ async function cleanupExpired(prisma: any) {
   })
 }
 
-/**
- * Prefill simples:
- * - se pendentes (deleteAt=null) < 2, tenta inserir até completar 2
- * - seed: último item pendente; se não existir, último item geral; se não existir, prompt “popular songs”
- * - dedupe por youtubeUrl (não insere se já existir no DB)
- * - NÃO repete o mesmo título da última tocada (mesmo nome -> vai pra próxima sugestão)
- * - NÃO escolhe “ao vivo” (filtro na busca do YouTube Music)
- */
 async function ensurePrefill(prisma: any) {
   const now = Date.now()
   if (now - lastAutofillAt < AUTOFILL_COOLDOWN_MS) return
@@ -312,26 +383,7 @@ async function ensurePrefill(prisma: any) {
   }
 
   if (undeliveredCount === 0 && inserted === 0) {
-    const yt = await searchYouTubeMusicFirstSong('Never Gonna Give You Up')
-    if (yt) {
-      const exists = await prisma.radioRequest.findFirst({
-        where: { youtubeUrl: yt.youtubeUrl },
-        select: { id: true },
-      })
-      if (!exists) {
-        await prisma.radioRequest.create({
-          data: {
-            recordingMbid: yt.videoId,
-            trackName: yt.title,
-            artistName: yt.artistName,
-            releaseName: yt.albumName || null,
-            coverUrl: yt.thumbnailUrl || null,
-            youtubeUrl: yt.youtubeUrl,
-            deleteAt: null,
-          },
-        })
-      }
-    }
+    console.log("undeliveredCount",undeliveredCount,"inserted",inserted)
   }
 }
 
@@ -372,6 +424,7 @@ export const Route = createFileRoute('/api/liquidsoap')({
           await cleanupExpired(prisma)
         } catch {
           // não derruba o liquidsoap
+          console.log("catch cleanupExpired")
         }
 
         // 1) garante prefill se a fila estiver baixa
@@ -410,3 +463,4 @@ export const Route = createFileRoute('/api/liquidsoap')({
     },
   },
 })
+

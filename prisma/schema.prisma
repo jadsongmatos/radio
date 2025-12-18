@@ -18,6 +18,7 @@ model RadioRequest {
   youtubeUrl    String
   createdAt     DateTime  @default(now())
   deleteAt      DateTime?
+  durationSec   Int
 
   @@index([createdAt])
   @@index([deleteAt])

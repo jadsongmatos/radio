@@ -196,8 +196,8 @@ export default function RadioPlayerCard({ azura }: RadioPlayerCardProps) {
     const hls = new Hls({
       liveSyncDurationCount: 22,
       liveMaxLatencyDurationCount: 24,
-      maxBufferLength: Math.min(110, Math.max(60, playlistWindowSeconds - 8)),
-      backBufferLength: 118,
+      maxBufferLength: playlistWindowSeconds,
+      backBufferLength: 30,
       maxBufferSize: 10 * 1000 * 1000,
     })
 

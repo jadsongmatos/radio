@@ -22,7 +22,36 @@ function isLikelyYouTubeVideoId(id: string) {
   return /^[a-zA-Z0-9_-]{6,20}$/.test(id)
 }
 
-// Compat: aceita tanto {videoId, albumName} quanto {recordingMbid, releaseName}
+function parseDurationTextToSec(s?: string | null) {
+  if (!s) return null
+  const parts = s
+    .split(':')
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  if (parts.some((p) => !/^\d+$/.test(p))) return null
+
+  const nums = parts.map(Number)
+  if (nums.length === 3) {
+    const [h, m, sec] = nums
+    return h * 3600 + m * 60 + sec
+  }
+  if (nums.length === 2) {
+    const [m, sec] = nums
+    return m * 60 + sec
+  }
+  if (nums.length === 1) return nums[0]
+  return null
+}
+
+function normalizeDurationSec(body: AddBodyCompat) {
+  const raw = body.durationSec
+  if (Number.isFinite(raw)) return Math.max(0, Math.floor(raw as number))
+
+  const parsed = parseDurationTextToSec(body.durationText ?? null)
+  return parsed ?? 0
+}
+
 type AddBodyCompat = {
   videoId?: string
   albumName?: string
@@ -34,6 +63,9 @@ type AddBodyCompat = {
   artistName?: string
   coverUrl?: string
   youtubeUrl?: string
+
+  durationSec?: number
+  durationText?: string
 }
 
 export const Route = createFileRoute('/api/queue')({
@@ -74,6 +106,8 @@ export const Route = createFileRoute('/api/queue')({
         const coverUrlRaw = (body.coverUrl ?? '').trim()
         const coverUrl = coverUrlRaw ? coverUrlRaw : null
 
+        const durationSec = normalizeDurationSec(body)
+
         if (!videoId) {
           return json(
             { message: 'videoId (ou recordingMbid) é obrigatório.' },
@@ -110,8 +144,8 @@ export const Route = createFileRoute('/api/queue')({
             releaseName,
             coverUrl,
             youtubeUrl,
-            // se seu schema tem deletedAt, ele já vai defaultar null
-          } as any,
+            durationSec,
+          },
         })
 
         return json(created, { status: 201, headers: NO_STORE_HEADERS })

@@ -35,7 +35,7 @@ import 'swiper/css/pagination'
 import 'swiper/css/navigation'
 
 import RadioPlayerCard from '@/components/RadioPlayerCard'
-import {  useAzuraNowPlaying } from '@/hooks/azuraNowPlaying'
+import { useAzuraNowPlaying } from '@/hooks/azuraNowPlaying'
 
 /**  ANIMAÇÕES CSS (Keyframes) */
 const pulseGlow = keyframes`
@@ -81,6 +81,7 @@ type RadioRequestItem = {
   coverUrl?: string | null
   youtubeUrl: string
   createdAt: string
+  durationSec: number // ✅ NEW
 }
 
 /**  CONSTANTS / HELPERS  */
@@ -103,6 +104,40 @@ function getYTArtistText(item: YTMusicSearchItem) {
 
 function getYTCoverUrl(item: YTMusicSearchItem) {
   return item.thumbnailUrl || `https://i.ytimg.com/vi/${item.videoId}/hqdefault.jpg`
+}
+
+// ✅ NEW: duration helpers (frontend)
+function parseDurationTextToSec(s?: string | null) {
+  if (!s) return null
+  const parts = s
+    .split(':')
+    .map((p) => p.trim())
+    .filter(Boolean)
+
+  if (parts.some((p) => !/^\d+$/.test(p))) return null
+
+  const nums = parts.map(Number)
+  if (nums.length === 3) {
+    const [h, m, sec] = nums
+    return h * 3600 + m * 60 + sec
+  }
+  if (nums.length === 2) {
+    const [m, sec] = nums
+    return m * 60 + sec
+  }
+  if (nums.length === 1) return nums[0]
+  return null
+}
+
+function formatDuration(sec?: number | null) {
+  if (sec == null) return '—'
+  const s = Math.max(0, Math.floor(sec))
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const ss = s % 60
+  return h > 0
+    ? `${h}:${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
+    : `${m}:${String(ss).padStart(2, '0')}`
 }
 
 async function searchYouTubeMusic(query: string, limit = 8): Promise<Array<YTMusicSearchItem>> {
@@ -184,6 +219,21 @@ function MusicRequestQueuePage() {
   const initialQueue = loaderData.queue ?? []
   const queue = useMemo(() => initialQueue ?? [], [initialQueue])
 
+  // ✅ NEW: total + ETA
+  const queueTotalSec = useMemo(
+    () => queue.reduce((sum, it) => sum + (it.durationSec ?? 0), 0),
+    [queue],
+  )
+
+  const queueWithEta = useMemo(() => {
+    let acc = 0
+    return queue.map((it) => {
+      const etaSec = acc
+      acc += it.durationSec ?? 0
+      return { ...it, etaSec }
+    })
+  }, [queue])
+
   const { data: azura } = useAzuraNowPlaying(15000)
   const isOnline = !!azura?.is_online
 
@@ -215,6 +265,8 @@ function MusicRequestQueuePage() {
     setAddingId(track.videoId)
     setError(null)
     try {
+      const durationSec = parseDurationTextToSec(track.durationText) ?? 0 // ✅ NEW
+
       const res = await fetch('/api/queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -225,6 +277,7 @@ function MusicRequestQueuePage() {
           albumName: track.album,
           coverUrl: getYTCoverUrl(track),
           youtubeUrl: track.youtubeUrl,
+          durationSec, // ✅ NEW
         }),
       })
       if (!res.ok) throw new Error()
@@ -488,13 +541,22 @@ function MusicRequestQueuePage() {
 
             {/* DIREITA */}
             <Box sx={{ flex: 1 }}>
-              <Typography
-                variant="h6"
-                fontWeight={800}
-                sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: '#fff' }}
-              >
-                <QueueIcon sx={{ color: '#8b5cf6' }} /> FILA DE REPRODUÇÃO
-              </Typography>
+              {/* ✅ NEW: header com total */}
+              <Stack direction="row" alignItems="baseline" justifyContent="space-between" sx={{ mb: 2 }}>
+                <Typography
+                  variant="h6"
+                  fontWeight={800}
+                  sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#fff' }}
+                >
+                  <QueueIcon sx={{ color: '#8b5cf6' }} /> FILA DE REPRODUÇÃO
+                </Typography>
+
+                {queue.length > 0 && (
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.55)' }}>
+                    {queue.length} músicas • Total {formatDuration(queueTotalSec)}
+                  </Typography>
+                )}
+              </Stack>
 
               {queue.length === 0 ? (
                 <Box
@@ -511,7 +573,7 @@ function MusicRequestQueuePage() {
                 </Box>
               ) : (
                 <Stack spacing={1.5}>
-                  {queue.map((item, index) => (
+                  {queueWithEta.map((item, index) => (
                     <GlassCard
                       key={item.id}
                       sx={{
@@ -536,7 +598,9 @@ function MusicRequestQueuePage() {
                       >
                         {index + 1}
                       </Typography>
+
                       <Avatar src={item.coverUrl || ''} variant="rounded" />
+
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                         <Typography variant="body2" fontWeight={700} noWrap sx={{ color: '#f8fafc' }}>
                           {item.trackName}
@@ -545,9 +609,35 @@ function MusicRequestQueuePage() {
                           {item.artistName}
                         </Typography>
                       </Box>
-                      {index === 0 && (
-                        <Chip size="small" label="Next" color="primary" sx={{ height: 20, fontSize: '0.65rem' }} />
-                      )}
+
+                      {/* ✅ NEW: duração + ETA + Next */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Chip
+                          size="small"
+                          label={formatDuration(item.durationSec)}
+                          sx={{
+                            height: 20,
+                            fontSize: '0.70rem',
+                            color: '#e2e8f0',
+                            bgcolor: 'rgba(0,0,0,0.35)',
+                            border: '1px solid rgba(255,255,255,0.10)',
+                          }}
+                        />
+                        <Chip
+                          size="small"
+                          label={index === 0 ? 'Agora' : `Em ${formatDuration(item.etaSec)}`}
+                          sx={{
+                            height: 20,
+                            fontSize: '0.70rem',
+                            color: '#e2e8f0',
+                            bgcolor: 'rgba(0,0,0,0.22)',
+                            border: '1px solid rgba(255,255,255,0.10)',
+                          }}
+                        />
+                        {index === 0 && (
+                          <Chip size="small" label="Next" color="primary" sx={{ height: 20, fontSize: '0.65rem' }} />
+                        )}
+                      </Box>
                     </GlassCard>
                   ))}
                 </Stack>
