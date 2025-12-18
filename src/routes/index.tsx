@@ -1,11 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+// src/routes/index.tsx (ou onde estiver sua rota '/')
+import React, { useMemo, useState } from 'react'
 import { createFileRoute, useRouter } from '@tanstack/react-router'
-
-import Hls from 'hls.js'
-
-import AudioPlayer, { RHAP_UI } from 'react-h5-audio-player'
-import 'react-h5-audio-player/lib/styles.css'
-
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { EffectCoverflow, Keyboard, Mousewheel, Navigation, Pagination } from 'swiper/modules'
 
@@ -21,10 +16,7 @@ import {
   Divider,
   GlobalStyles,
   IconButton,
-  Menu,
-  MenuItem,
   Stack,
-  Switch,
   TextField,
   Typography,
   keyframes,
@@ -32,21 +24,20 @@ import {
 
 import {
   Add as AddIcon,
-  Check as CheckIcon,
-  Equalizer as EqualizerIcon,
   QueueMusic as QueueIcon,
   Radio as RadioIcon,
   Search as SearchIcon,
-  Settings as SettingsIcon,
 } from '@mui/icons-material'
 
+import 'swiper/css'
+import 'swiper/css/effect-coverflow'
+import 'swiper/css/pagination'
+import 'swiper/css/navigation'
+
+import RadioPlayerCard from '@/components/RadioPlayerCard'
+import {  useAzuraNowPlaying } from '@/hooks/azuraNowPlaying'
+
 /**  ANIMAÇÕES CSS (Keyframes) */
-
-const spin = keyframes`
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-`
-
 const pulseGlow = keyframes`
   0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.4); }
   70% { box-shadow: 0 0 0 10px rgba(79, 70, 229, 0); }
@@ -65,12 +56,11 @@ const equalizerAnim = keyframes`
   100% { height: 3px; }
 `
 
-/**  TIPOS  */
-
+/**  TIPOS (YouTube / Queue) */
 type YTMusicSearchItem = {
   videoId: string
   title: string
-  artists: string[]
+  artists: Array<string>
   album?: string | null
   durationText?: string | null
   thumbnailUrl?: string | null
@@ -79,94 +69,7 @@ type YTMusicSearchItem = {
 
 type YTMusicSearchResponse = {
   query: string
-  items: YTMusicSearchItem[]
-}
-
-type AzuraSong = {
-  id: string
-  art: string | null
-  custom_fields: Array<any>
-  text: string
-  artist: string
-  title: string
-  album: string
-  genre: string
-  isrc: string
-  lyrics: string
-}
-
-type AzuraSongHistoryItem = {
-  sh_id: number
-  played_at: number
-  duration: number
-  playlist: string
-  streamer: string
-  is_request: boolean
-  song: AzuraSong
-}
-
-type AzuraNowPlaying = {
-  station: {
-    id: number
-    name: string
-    shortcode: string
-    description: string
-    frontend: string
-    backend: string
-    timezone: string
-    listen_url: string
-    url: string
-    public_player_url: string
-    playlist_pls_url: string
-    playlist_m3u_url: string
-    is_public: boolean
-    requests_enabled: boolean
-    mounts: Array<{
-      id: number
-      name: string
-      url: string
-      bitrate: number
-      format: string
-      listeners: {
-        total: number
-        unique: number
-        current: number
-      }
-      path: string
-      is_default: boolean
-    }>
-    remotes: any[]
-    hls_enabled: boolean
-    hls_is_default: boolean
-    hls_url: string
-    hls_listeners: number
-  }
-  listeners: {
-    total: number
-    unique: number
-    current: number
-  }
-  live: {
-    is_live: boolean
-    streamer_name: string
-    broadcast_start: number | null
-    art: string | null
-  }
-  now_playing: {
-    sh_id: number
-    played_at: number
-    duration: number
-    playlist: string
-    streamer: string
-    is_request: boolean
-    song: AzuraSong
-    elapsed: number
-    remaining: number
-  } | null
-  playing_next: AzuraSongHistoryItem | null
-  song_history: AzuraSongHistoryItem[]
-  is_online: boolean
-  cache: unknown
+  items: Array<YTMusicSearchItem>
 }
 
 type RadioRequestItem = {
@@ -181,33 +84,16 @@ type RadioRequestItem = {
 }
 
 /**  CONSTANTS / HELPERS  */
-
-const AZURA_NOWPLAYING_URL = 'https://webradio.dpdns.org/api/nowplaying/j'
 const YTMUSIC_SEARCH_ENDPOINT = '/api/ytmusic-search'
-
-// SUA URL HLS FIXA
-const HLS_STREAM_URL = 'https://webradio.dpdns.org/hls/j/live.m3u8'
-
-// Seus parâmetros de servidor
-const HLS_SEGMENT_DURATION_SECONDS = 2
-const HLS_PLAYLIST_SEGMENTS = 30
-// const HLS_OVERHEAD_SEGMENTS = 15
 
 function formatAzuraDate(timestamp?: number | null) {
   if (!timestamp) return ''
-  return new Date(timestamp * 1000).toLocaleString('pt-BR', {
+  return new Date(timestamp * 1000).toLocaleTimeString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
     hour12: false,
     hour: '2-digit',
     minute: '2-digit',
   })
-}
-
-function getAzuraSongText(song?: AzuraSong | null) {
-  if (!song) return ''
-  if (song.text) return song.text
-  if (song.artist || song.title) return [song.artist, song.title].filter(Boolean).join(' - ')
-  return ''
 }
 
 function getYTArtistText(item: YTMusicSearchItem) {
@@ -219,7 +105,7 @@ function getYTCoverUrl(item: YTMusicSearchItem) {
   return item.thumbnailUrl || `https://i.ytimg.com/vi/${item.videoId}/hqdefault.jpg`
 }
 
-async function searchYouTubeMusic(query: string, limit = 8): Promise<YTMusicSearchItem[]> {
+async function searchYouTubeMusic(query: string, limit = 8): Promise<Array<YTMusicSearchItem>> {
   const q = query.trim()
   if (!q) return []
 
@@ -234,7 +120,7 @@ async function searchYouTubeMusic(query: string, limit = 8): Promise<YTMusicSear
   }
 
   const data = (await res.json().catch(() => null)) as YTMusicSearchResponse | null
-  return (data?.items ?? []) as YTMusicSearchItem[]
+  return data?.items ?? []
 }
 
 export const Route = createFileRoute('/')({
@@ -244,23 +130,18 @@ export const Route = createFileRoute('/')({
     try {
       const res = await fetch('/api/queue', {
         cache: 'no-store',
-        headers: {
-          Accept: 'application/json',
-          'Cache-Control': 'no-store',
-        },
+        headers: { Accept: 'application/json', 'Cache-Control': 'no-store' },
       })
-      if (!res.ok) return { queue: [] as RadioRequestItem[] }
-      const queue = (await res.json()) as RadioRequestItem[]
+      if (!res.ok) return { queue: [] as Array<RadioRequestItem> }
+      const queue = (await res.json()) as Array<RadioRequestItem>
       return { queue }
     } catch {
-      return { queue: [] as RadioRequestItem[] }
+      return { queue: [] as Array<RadioRequestItem> }
     }
   },
 })
 
-
 /**  COMPONENTES VISUAIS CUSTOMIZADOS  */
-
 const GlassCard = ({ children, sx, ...props }: any) => (
   <Card
     sx={{
@@ -296,114 +177,21 @@ const Visualizer = () => (
 )
 
 /**  PAGE  */
-
 function MusicRequestQueuePage() {
   const router = useRouter()
   const loaderData = Route.useLoaderData()
 
-  const initialQueue = (loaderData.queue ?? []) as RadioRequestItem[]
+  const initialQueue = loaderData.queue ?? []
   const queue = useMemo(() => initialQueue ?? [], [initialQueue])
 
+  const { data: azura } = useAzuraNowPlaying(15000)
+  const isOnline = !!azura?.is_online
+
   const [query, setQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<YTMusicSearchItem[]>([])
+  const [searchResults, setSearchResults] = useState<Array<YTMusicSearchItem>>([])
   const [searching, setSearching] = useState(false)
   const [addingId, setAddingId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-
-  const [azura, setAzura] = useState<AzuraNowPlaying | null>(null)
-  // const [azuraLoading, setAzuraLoading] = useState<boolean>(true)
-  const [azuraError, setAzuraError] = useState<string | null>(null)
-
-  const [selectedMountId, setSelectedMountId] = useState<string>('hls')
-
-  // -- MENU DE CONFIGURAÇÕES --
-  const [settingsAnchorEl, setSettingsAnchorEl] = useState<null | HTMLElement>(null)
-  const isSettingsOpen = Boolean(settingsAnchorEl)
-  const handleSettingsOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setSettingsAnchorEl(event.currentTarget)
-  }
-  const handleSettingsClose = () => {
-    setSettingsAnchorEl(null)
-  }
-
-  const playerRef = useRef<any>(null)
-
-  const [keepAliveEnabled, setKeepAliveEnabled] = useState(true)
-  const keepAliveRef = useRef(true)
-  useEffect(() => {
-    keepAliveRef.current = keepAliveEnabled
-  }, [keepAliveEnabled])
-
-  const [autoplayBlocked, setAutoplayBlocked] = useState(false)
-
-  const [manualPaused, setManualPaused] = useState(false)
-  const manualPausedRef = useRef(false)
-  useEffect(() => {
-    manualPausedRef.current = manualPaused
-  }, [manualPaused])
-
-  const userMainControlClickRef = useRef(false)
-
-  const [streamBuster, setStreamBuster] = useState(0)
-  const retryTimerRef = useRef<number | null>(null)
-  const backoffRef = useRef(1000)
-
-  const clearRetry = useCallback(() => {
-    if (retryTimerRef.current) window.clearTimeout(retryTimerRef.current)
-    retryTimerRef.current = null
-  }, [])
-
-  const hlsRef = useRef<Hls | null>(null)
-  const usingHlsJsRef = useRef(false)
-
-  const tryPlay = useCallback(async () => {
-    const audio = playerRef.current?.audio?.current as HTMLAudioElement | undefined
-    if (!audio) return false
-
-    try {
-      if (!usingHlsJsRef.current) {
-        audio.load()
-      }
-
-      await audio.play()
-      setAutoplayBlocked(false)
-      return true
-    } catch {
-      setAutoplayBlocked(true)
-      return false
-    }
-  }, [])
-
-  useEffect(() => {
-    let alive = true
-    let timer: number | undefined
-
-    const fetchAzura = async () => {
-      try {
-        setAzuraError(null)
-        const res = await fetch(AZURA_NOWPLAYING_URL, {
-          headers: { Accept: 'application/json' },
-        })
-        if (!res.ok) throw new Error('Erro AzuraCast')
-        const data: AzuraNowPlaying = await res.json()
-        if (!alive) return
-        setAzura(data)
-      } catch {
-        if (!alive) return
-        setAzura(null)
-        setAzuraError('Rádio offline ou inalcançável.')
-      } finally {
-        // if (alive) setAzuraLoading(false)
-      }
-    }
-
-    fetchAzura()
-    timer = window.setInterval(fetchAzura, 15000)
-    return () => {
-      alive = false
-      if (timer) window.clearInterval(timer)
-    }
-  }, [])
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -450,269 +238,16 @@ function MusicRequestQueuePage() {
     }
   }
 
-  const currentSong = azura?.now_playing?.song ?? null
-  const isOnline = !!azura?.is_online
-  const listeners = azura?.listeners
-  const mounts = azura?.station?.mounts ?? []
-
-  /**
-   *  Escolha da URL do stream
-   */
-  const streamSrc = useMemo(() => {
-    // Se usuário escolheu HLS fixo
-    if (selectedMountId === 'hls') return HLS_STREAM_URL
-
-    // Caso queira usar o HLS do próprio Azura (se existir)
-    if (selectedMountId === 'hls-azura' && azura?.station?.hls_url) return azura.station.hls_url
-
-    // Fallback para auto (Icecast/SHOUTcast etc)
-    if (!azura) return undefined
-
-    if (selectedMountId !== 'auto') {
-      const chosen = mounts.find((m) => String(m.id) === selectedMountId)
-      if (chosen?.url) return chosen.url
-    }
-    if (azura.station.listen_url) return azura.station.listen_url
-    return mounts[0]?.url
-  }, [azura, mounts, selectedMountId])
-
-  /**
-   *  Cache-buster
-   */
-  const effectiveStreamSrc = useMemo(() => {
-    if (!streamSrc) return undefined
-    const sep = streamSrc.includes('?') ? '&' : '?'
-    return `${streamSrc}${sep}_t=${streamBuster}`
-  }, [streamSrc, streamBuster])
-
-  const isHlsUrl = useMemo(() => {
-    const u = effectiveStreamSrc ?? ''
-    return u.includes('.m3u8')
-  }, [effectiveStreamSrc])
-
-  useEffect(() => {
-    const audio = playerRef.current?.audio?.current as HTMLAudioElement | undefined
-    if (!audio) return
-
-    // Limpa instância anterior
-    if (hlsRef.current) {
-      try {
-        hlsRef.current.destroy()
-      } catch {}
-      hlsRef.current = null
-    }
-    usingHlsJsRef.current = false
-
-    const url = effectiveStreamSrc
-    if (!url) return
-
-    // Se não for HLS, deixa o AudioPlayer usar src normal
-    if (!isHlsUrl) {
-      audio.src = url
-      return
-    }
-
-    // Safari/iOS: HLS nativo (sem hls.js)
-    const canNativeHls = !!audio.canPlayType('application/vnd.apple.mpegurl')
-    if (canNativeHls) {
-      audio.src = url
-      usingHlsJsRef.current = false
-      return
-    }
-
-    // Outros browsers: hls.js (MSE)
-    if (!Hls.isSupported()) {
-      audio.src = url
-      usingHlsJsRef.current = false
-      return
-    }
-
-    // Remove qualquer src anterior direto
-    audio.removeAttribute('src')
-    audio.load()
-
-    const playlistWindowSeconds = HLS_SEGMENT_DURATION_SECONDS * HLS_PLAYLIST_SEGMENTS // 120s
-
-    const hls = new Hls({
-      liveSyncDurationCount: 22,
-      liveMaxLatencyDurationCount: 24,
-      maxBufferLength: Math.min(110, Math.max(60, playlistWindowSeconds - 8)),
-      backBufferLength: 118,
-      maxBufferSize: 10 * 1000 * 1000,
-    })
-
-    hlsRef.current = hls
-    usingHlsJsRef.current = true
-
-    hls.attachMedia(audio)
-    hls.loadSource(url)
-
-    const onManifest = async () => {
-      if (!keepAliveRef.current) return
-      if (manualPausedRef.current) return
-      if (autoplayBlocked) return
-      await tryPlay()
-    }
-
-    const onError = (_event: string, data: any) => {
-      if (!data) return
-      if (data.fatal) {
-        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-          try {
-            hls.startLoad()
-          } catch {
-            setStreamBuster((v) => v + 1)
-          }
-        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-          try {
-            hls.recoverMediaError()
-          } catch {
-            setStreamBuster((v) => v + 1)
-          }
-        } else {
-          try {
-            hls.destroy()
-          } catch {}
-          hlsRef.current = null
-          usingHlsJsRef.current = false
-          setStreamBuster((v) => v + 1)
-        }
-      }
-    }
-
-    hls.on(Hls.Events.MANIFEST_PARSED, onManifest)
-    hls.on(Hls.Events.ERROR, onError)
-
-    return () => {
-      try {
-        hls.off(Hls.Events.MANIFEST_PARSED, onManifest)
-        hls.off(Hls.Events.ERROR, onError)
-      } catch {}
-      try {
-        hls.destroy()
-      } catch {}
-      hlsRef.current = null
-      usingHlsJsRef.current = false
-    }
-  }, [effectiveStreamSrc, isHlsUrl])
-
-  const scheduleRetry = useCallback(
-    (_reason: string) => {
-      if (manualPausedRef.current) return
-      if (!keepAliveRef.current || !isOnline) return
-      if (autoplayBlocked) return
-
-      clearRetry()
-      const delay = backoffRef.current
-
-      retryTimerRef.current = window.setTimeout(async () => {
-        if (manualPausedRef.current) return
-        if (!keepAliveRef.current || !isOnline) return
-        if (autoplayBlocked) return
-
-        const ok = await tryPlay()
-        if (ok) {
-          backoffRef.current = 1000
-          clearRetry()
-          return
-        }
-
-        setStreamBuster((v) => v + 1)
-        backoffRef.current = Math.min(backoffRef.current * 2, 30000)
-        scheduleRetry('backoff')
-      }, delay)
-    },
-    [autoplayBlocked, clearRetry, isOnline, tryPlay]
-  )
-
-  useEffect(() => {
-    if (!keepAliveEnabled) return
-    if (!isOnline) {
-      clearRetry()
-      return
-    }
-    if (manualPausedRef.current) return
-    scheduleRetry('online-or-src-change')
-  }, [keepAliveEnabled, isOnline, effectiveStreamSrc])
-
-  useEffect(() => {
-    if (!keepAliveEnabled) return
-    const id = window.setInterval(() => {
-      if (!keepAliveRef.current || !isOnline) return
-      if (manualPausedRef.current) return
-      if (autoplayBlocked) return
-      const audio = playerRef.current?.audio?.current as HTMLAudioElement | undefined
-      if (audio?.paused) scheduleRetry('watchdog-paused')
-    }, 12000)
-    return () => window.clearInterval(id)
-  }, [autoplayBlocked, isOnline, keepAliveEnabled, scheduleRetry])
-
-  useEffect(() => {
-    const audio = playerRef.current?.audio?.current as HTMLAudioElement | undefined
-    if (!audio) return
-    const onStalled = () => scheduleRetry('stalled')
-    audio.addEventListener('stalled', onStalled)
-    return () => audio.removeEventListener('stalled', onStalled)
-  }, [effectiveStreamSrc, scheduleRetry])
-
-  const handlePlayerPointerDownCapture = (e: React.PointerEvent) => {
-    const target = e.target as HTMLElement
-    if (target?.closest?.('.rhap_main-controls-button')) {
-      userMainControlClickRef.current = true
-      window.setTimeout(() => {
-        userMainControlClickRef.current = false
-      }, 300)
-    }
-  }
-
-  const shouldAutoPlay = keepAliveEnabled && !manualPaused
-
   return (
     <>
       <GlobalStyles
         styles={{
-          body: {
-            margin: 0,
-            padding: 0,
-            background: '#000',
-            fontFamily: "'Inter', sans-serif",
-          },
+          body: { margin: 0, padding: 0, background: '#000', fontFamily: "'Inter', sans-serif" },
 
-          '.rhap_progress-section': { display: 'none !important' },
-          '.rhap_time': { display: 'none !important' },
-          '.rhap_container': {
-            backgroundColor: 'transparent !important',
-            boxShadow: 'none !important',
-            padding: '10px 0 !important',
-          },
-          '.rhap_button-clear': {
-            color: '#fff !important',
-            opacity: 0.9,
-            transition: 'all 0.2s',
-          },
-          '.rhap_button-clear:hover': {
-            opacity: 1,
-            transform: 'scale(1.1)',
-            color: '#818cf8 !important',
-          },
-          '.rhap_main-controls-button': {
-            fontSize: '40px !important',
-          },
-
-          '.recentSwiper': {
-            paddingBottom: 28,
-            paddingLeft: 8,
-            paddingRight: 8,
-          },
-          '.recentSwiper .swiper-slide': {
-            width: 170,
-          },
-          '.recentSwiper .swiper-slide-transform': {
-            height: '100%',
-          },
-          '.recentSwiper .swiper-pagination': {
-            bottom: 6,
-          },
+          '.recentSwiper': { paddingBottom: 28, paddingLeft: 8, paddingRight: 8 },
+          '.recentSwiper .swiper-slide': { width: 170 },
+          '.recentSwiper .swiper-slide-transform': { height: '100%' },
+          '.recentSwiper .swiper-pagination': { bottom: 6 },
           '.recentSwiper .swiper-pagination-bullet': {
             width: 7,
             height: 7,
@@ -854,279 +389,8 @@ function MusicRequestQueuePage() {
             />
           </Stack>
 
-          {/* PLAYER PRINCIPAL */}
-          <GlassCard sx={{ mb: 6, position: 'relative', overflow: 'hidden' }}>
-            {/* BOTÃO DE CONFIGURAÇÕES (NOVO) */}
-            <Box sx={{ position: 'absolute', top: 12, right: 12, zIndex: 10 }}>
-              <IconButton
-                onClick={handleSettingsOpen}
-                sx={{
-                  color: 'rgba(255,255,255,0.4)',
-                  backdropFilter: 'blur(4px)',
-                  bgcolor: 'rgba(0,0,0,0.2)',
-                  '&:hover': { color: '#fff', bgcolor: 'rgba(0,0,0,0.4)' },
-                }}
-              >
-                <SettingsIcon />
-              </IconButton>
-            </Box>
-
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundImage: `url(${currentSong?.art || ''})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                filter: 'blur(50px) brightness(0.4)',
-                opacity: 0.6,
-                zIndex: 0,
-              }}
-            />
-
-            <Stack
-              direction={{ xs: 'column', sm: 'row' }}
-              spacing={{ xs: 4, sm: 6 }}
-              sx={{ p: { xs: 3, sm: 5 }, position: 'relative', zIndex: 1 }}
-              alignItems="center"
-            >
-              {/* DISCO */}
-              <Box
-                sx={{
-                  position: 'relative',
-                  width: { xs: 240, sm: 280 },
-                  height: { xs: 240, sm: 280 },
-                  flexShrink: 0,
-                }}
-              >
-                <Box
-                  sx={{
-                    width: '100%',
-                    height: '100%',
-                    borderRadius: '50%',
-                    boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
-                    border: '4px solid rgba(25,25,25, 0.8)',
-                    position: 'relative',
-                    animation: isOnline && !manualPaused ? `${spin} 8s linear infinite` : 'none',
-                    '&::after': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      borderRadius: '50%',
-                      background:
-                        'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.05) 100%)',
-                      pointerEvents: 'none',
-                    },
-                  }}
-                >
-                  <Box
-                    component="img"
-                    src={currentSong?.art || 'https://via.placeholder.com/300/111/fff?text=RADIO'}
-                    sx={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
-                  />
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      top: '50%',
-                      left: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      width: 50,
-                      height: 50,
-                      bgcolor: '#1a1a1a',
-                      borderRadius: '50%',
-                      border: '3px solid #333',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.8)',
-                    }}
-                  >
-                    <Box sx={{ width: 8, height: 8, bgcolor: '#888', borderRadius: '50%' }} />
-                  </Box>
-                </Box>
-
-                {azura?.now_playing?.is_request && (
-                  <Chip
-                    label="Pedido"
-                    color="primary"
-                    size="small"
-                    sx={{
-                      position: 'absolute',
-                      bottom: -10,
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                      fontWeight: 'bold',
-                      zIndex: 10,
-                      background: 'linear-gradient(90deg, #6366f1, #8b5cf6)',
-                    }}
-                  />
-                )}
-              </Box>
-
-              {/* INFO + CONTROLES */}
-              <Box sx={{ flex: 1, width: '100%', textAlign: { xs: 'center', sm: 'left' } }}>
-                <Typography
-                  variant="h4"
-                  fontWeight={800}
-                  gutterBottom
-                  sx={{
-                    textShadow: '0 2px 10px rgba(0,0,0,0.5)',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                    lineHeight: 1.2,
-                  }}
-                >
-                  {getAzuraSongText(currentSong) || 'Aguardando informações...'}
-                </Typography>
-
-                <Typography variant="h6" sx={{ color: '#a5b4fc', mb: 3, fontWeight: 500 }}>
-                  {currentSong?.album || 'Rádio Online'}
-                </Typography>
-                <Stack
-                  direction="row"
-                  spacing={2}
-                  alignItems="center"
-                  justifyContent={{ xs: 'center', sm: 'flex-start' }}
-                  sx={{ mb: 2 }}
-                >
-                  {listeners && (
-                    <Chip
-                      icon={<EqualizerIcon sx={{ fontSize: 16 }} />}
-                      label={`${listeners.current} Ouvintes`}
-                      size="small"
-                      sx={{
-                        bgcolor: 'rgba(0,0,0,0.3)',
-                        color: '#94a3b8',
-                        border: '1px solid rgba(255,255,255,0.05)',
-                      }}
-                    />
-                  )}
-                </Stack>
-
-                <Box sx={{ width: '100%' }} onPointerDownCapture={handlePlayerPointerDownCapture}>
-                  <AudioPlayer
-                    ref={playerRef}
-                    src={isHlsUrl ? '' : effectiveStreamSrc}
-                    preload="none"
-                    autoPlay={shouldAutoPlay}
-                    autoPlayAfterSrcChange={shouldAutoPlay}
-                    showJumpControls={false}
-                    showSkipControls={false}
-                    customAdditionalControls={[]}
-                    customProgressBarSection={[]}
-                    customControlsSection={[RHAP_UI.MAIN_CONTROLS, RHAP_UI.VOLUME_CONTROLS]}
-                    layout="horizontal"
-                    onPlay={() => {
-                      setManualPaused(false)
-                      manualPausedRef.current = false
-                      backoffRef.current = 1000
-                      clearRetry()
-                    }}
-                    onPlaying={() => {
-                      setAutoplayBlocked(false)
-                      backoffRef.current = 1000
-                      clearRetry()
-                    }}
-                    onPause={() => {
-                      const audio = playerRef.current?.audio?.current as HTMLAudioElement | undefined
-                      const ended = !!audio?.ended
-
-                      if (userMainControlClickRef.current && !ended) {
-                        setManualPaused(true)
-                        manualPausedRef.current = true
-                        clearRetry()
-                        return
-                      }
-
-                      if (!manualPausedRef.current) scheduleRetry('pause-not-manual')
-                    }}
-                    onError={() => scheduleRetry('onError')}
-                    onWaiting={() => scheduleRetry('onWaiting')}
-                    onSuspend={() => scheduleRetry('onSuspend')}
-                    onEmptied={() => scheduleRetry('onEmptied')}
-                    onEnded={() => scheduleRetry('onEnded')}
-                    onPlayError={() => setAutoplayBlocked(true)}
-                  />
-                </Box>
-              </Box>
-            </Stack>
-
-            {/* MENU DE CONFIGURAÇÕES OCULTO */}
-            <Menu
-              anchorEl={settingsAnchorEl}
-              open={isSettingsOpen}
-              onClose={handleSettingsClose}
-              PaperProps={{
-                sx: {
-                  bgcolor: 'rgba(20, 20, 35, 0.95)',
-                  backdropFilter: 'blur(10px)',
-                  color: '#fff',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  minWidth: 250,
-                  '& .MuiMenuItem-root': {
-                    fontSize: '0.9rem',
-                    '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
-                  },
-                },
-              }}
-              transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-              anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-            >
-              {/* SWITCH AUTO-RECONECTAR */}
-              <MenuItem
-                onClick={() => setKeepAliveEnabled(!keepAliveEnabled)}
-                sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 1.5 }}
-              >
-                <Box>
-                  <Typography variant="body2" fontWeight="bold">
-                    Auto-Reconectar
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block' }}>
-                    Tentar voltar se cair
-                  </Typography>
-                </Box>
-                <Switch size="small" checked={keepAliveEnabled} />
-              </MenuItem>
-
-              <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', my: 1 }} />
-
-              <Box sx={{ px: 2, py: 1 }}>
-                <Typography variant="caption" sx={{ color: '#ec4899', fontWeight: 'bold', textTransform: 'uppercase' }}>
-                  Fonte de Áudio (Stream)
-                </Typography>
-              </Box>
-
-              {/* OPÇÕES DE STREAM */}
-              {[
-                { id: 'hls', label: 'HLS (Estável / Buffer Alto)' },
-                { id: 'hls-azura', label: 'HLS (Nativo Azura)' },
-                { id: 'auto', label: 'Auto Quality (Padrão)' },
-                ...mounts.map((m) => ({ id: String(m.id), label: `${m.bitrate}kbps ${m.format.toUpperCase()}` })),
-              ].map((opt) => (
-                <MenuItem
-                  key={opt.id}
-                  onClick={() => {
-                    setSelectedMountId(opt.id)
-                    handleSettingsClose()
-                  }}
-                  selected={selectedMountId === opt.id}
-                  sx={{ justifyContent: 'space-between' }}
-                >
-                  {opt.label}
-                  {selectedMountId === opt.id && <CheckIcon sx={{ fontSize: 16, color: '#ec4899' }} />}
-                </MenuItem>
-              ))}
-            </Menu>
-          </GlassCard>
+          {/* ✅ PLAYER agora só recebe azura */}
+          <RadioPlayerCard azura={azura} />
 
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={4}>
             {/* ESQUERDA */}
@@ -1291,8 +555,8 @@ function MusicRequestQueuePage() {
             </Box>
           </Stack>
 
-          {/* TOCOU RECENTEMENTE (Swiper 3D) */}
-          {azura && azura.song_history.length > 0 && (
+          {/* TOCOU RECENTEMENTE */}
+          {!!azura?.song_history?.length && (
             <Box mt={6}>
               <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mb: 3 }} />
 
@@ -1368,7 +632,7 @@ function MusicRequestQueuePage() {
                       const cover = h.song.art || ''
                       const title = h.song.title || 'Sem título'
                       const artist = h.song.artist || '—'
-                      const time = formatAzuraDate(h.played_at).split(' ')[1] || ''
+                      const time = formatAzuraDate(h.played_at)
 
                       return (
                         <SwiperSlide key={h.sh_id}>
@@ -1432,4 +696,11 @@ function MusicRequestQueuePage() {
       </Box>
     </>
   )
+}
+
+/** (Opcional) Header de ouvintes usando a mesma query */
+export function HeaderOuvintes() {
+  const { data: azura } = useAzuraNowPlaying()
+  const ouvintes = azura?.listeners?.current ?? 0
+  return <div>{ouvintes} ouvintes</div>
 }

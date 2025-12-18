@@ -17,7 +17,7 @@ model RadioRequest {
   coverUrl      String?
   youtubeUrl    String
   createdAt     DateTime  @default(now())
-  deleteAt      DateTime? @map("delete_at")
+  deleteAt      DateTime?
 
   @@index([createdAt])
   @@index([deleteAt])

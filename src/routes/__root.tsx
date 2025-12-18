@@ -1,3 +1,4 @@
+// __root.tsx
 import {
   HeadContent,
   Scripts,
@@ -5,10 +6,8 @@ import {
 } from '@tanstack/react-router'
 
 import 'swiper/css/bundle';
+import { QueryClient,QueryClientProvider } from '@tanstack/react-query'
 import appCss from '../styles.css?url'
-
-import type { QueryClient } from '@tanstack/react-query'
-
 interface MyRouterContext {
   queryClient: QueryClient
 }
@@ -38,6 +37,8 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   shellComponent: RootDocument,
 })
 
+const queryClient = new QueryClient()
+
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -49,7 +50,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           crossOrigin="anonymous"></script>
       </head>
       <body suppressHydrationWarning>
+        <QueryClientProvider client={queryClient}>
         {children}
+        </QueryClientProvider>
         <Scripts />
       </body>
     </html>
