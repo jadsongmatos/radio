@@ -4,6 +4,7 @@ import {
   createRootRouteWithContext,
 } from '@tanstack/react-router'
 
+import 'swiper/css/bundle';
 import appCss from '../styles.css?url'
 
 import type { QueryClient } from '@tanstack/react-query'
