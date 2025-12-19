@@ -20,6 +20,7 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@kellnerd/listenbrainz": "npm:@jsr/kellnerd__listenbrainz@^0.9.2",
     "@mui/icons-material": "^7.3.6",
     "@mui/material": "^7.3.6",
     "@prisma/adapter-better-sqlite3": "^7.1.0",
