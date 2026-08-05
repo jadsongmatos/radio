@@ -1,11 +1,12 @@
 // src/routes/api/liquidsoap.ts
 import { createFileRoute } from '@tanstack/react-router'
-import { ApiError, ListenBrainzClient } from '@kellnerd/listenbrainz'
 
-const LB_RADIO_ENDPOINT = '1/explore/lb-radio'
-const LB_TOKEN = process.env.LISTENBRAINZ_TOKEN || ''
+// 
+// Config
+// 
 
 // Queremos garantir que, antes de entregar 1, existam pelo menos 2 pendentes.
+// Assim, depois de marcar 1 como entregue, ainda sobra 1 na fila.
 const TARGET_UNDELIVERED_BEFORE_DELIVER = 2
 
 // quanto tempo o item fica no banco depois de entregue
@@ -15,14 +16,20 @@ const DELETE_TTL_MS = 10 * 60 * 1000
 let lastAutofillAt = 0
 const AUTOFILL_COOLDOWN_MS = 10_000
 
-let ytPromise: Promise<any> | null = null
-let lbClient: ListenBrainzClient | null = null
+// token é obrigatório (você disse que sempre vai ter)
+const LB_TOKEN = process.env.LISTENBRAINZ_TOKEN ?? ''
+const LB_USER_AGENT =
+  process.env.LISTENBRAINZ_USER_AGENT ||
+  'MyRadio/1.0 (jadson.g-matos@oultook.com)'
 
-const NO_CACHE_HEADERS = {
-  'Cache-Control': 'no-store, max-age=0, must-revalidate',
-  Pragma: 'no-cache',
-  Expires: '0',
-} as const
+// MusicBrainz app identification (recomendado pelo musicbrainz-api)
+const MB_APP_NAME = process.env.MUSICBRAINZ_APP_NAME || 'MyRadio'
+const MB_APP_VERSION = process.env.MUSICBRAINZ_APP_VERSION || '1.0.0'
+const MB_APP_CONTACT = process.env.MUSICBRAINZ_APP_CONTACT || LB_USER_AGENT
+
+// 
+// Errors
+// 
 
 class ListenBrainzEmptyError extends Error {
   constructor(message: string) {
@@ -38,41 +45,18 @@ class ListenBrainzPromptEmptyError extends Error {
   }
 }
 
-class ListenBrainzNetworkError extends Error {
-  cause?: any
-  constructor(message: string, cause?: any) {
+class ListenBrainzSeedMissingError extends Error {
+  constructor(message: string) {
     super(message)
-    this.name = 'ListenBrainzNetworkError'
-    this.cause = cause
+    this.name = 'ListenBrainzSeedMissingError'
   }
 }
 
-function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms))
-}
+// 
+// Helpers: YouTube
+// 
 
-function isTransientNetworkError(err: any) {
-  const code = err?.cause?.code || err?.code
-  return (
-    code === 'ECONNRESET' ||
-    code === 'ETIMEDOUT' ||
-    code === 'EAI_AGAIN' ||
-    code === 'ECONNREFUSED' ||
-    code === 'ENOTFOUND'
-  )
-}
-
-function getLB() {
-  // Sem fallback: token é obrigatório
-  if (!LB_TOKEN) throw new Error('LISTENBRAINZ_TOKEN não definido')
-  if (!lbClient) {
-    lbClient = new ListenBrainzClient({
-      userToken: LB_TOKEN,
-      maxRetries: 1,
-    })
-  }
-  return lbClient
-}
+let ytPromise: Promise<any> | null = null
 
 function isValidYouTubeUrl(url: string) {
   const u = url.trim()
@@ -107,6 +91,10 @@ function buildPromptFromArtist(artistName: string) {
   return `artist:(${a})`
 }
 
+function buildPromptFromArtistMbid(artistMbid: string) {
+  return `artist:(${artistMbid})`
+}
+
 async function getYT() {
   if (!ytPromise) {
     const { Innertube } = await import('youtubei.js')
@@ -117,6 +105,13 @@ async function getYT() {
 
 type Thumb = { url?: string; width?: number; height?: number }
 
+/**
+ * Escolhe a melhor "capa" com heurística:
+ * - prefere thumbs quadradas (ou quase)
+ * - penaliza 16:9
+ * - prefere googleusercontent (muito comum pra album art)
+ * - evita i.ytimg.com (geralmente thumb de vídeo)
+ */
 function pickBestCoverThumbUrl(thumbnails: any): string | null {
   const arr: Array<Thumb> = Array.isArray(thumbnails)
     ? thumbnails
@@ -214,9 +209,11 @@ async function resolveCoverUrlForCandidate(
   }
 
   if (cover) cover = upscaleGoogleThumb(cover, 800)
+
   return cover
 }
 
+// Bloqueia “ao vivo” de forma conservadora (evita pegar “Live Forever”, etc.)
 function isLikelyLiveRecording(title: string, albumName?: string | null) {
   const t = (title ?? '').trim()
   const a = (albumName ?? '').trim()
@@ -301,9 +298,13 @@ async function searchYouTubeMusicFirstSong(
   return null
 }
 
+// 
+// Helpers: ListenBrainz (via @kellnerd/listenbrainz)
+// 
+
 type LbRadioResponse = {
   payload?: {
-    feedback?: any
+    feedback?: string[]
     jspf?: {
       playlist?: {
         track?: Array<{
@@ -316,61 +317,146 @@ type LbRadioResponse = {
   }
 }
 
-// Se prompt vazio -> erro interno (500 na API)
+let lbClientPromise: Promise<any> | null = null
+async function getLBClient() {
+  if (!LB_TOKEN.trim()) {
+    throw new Error('LISTENBRAINZ_TOKEN ausente/empty (token é obrigatório).')
+  }
+  if (!lbClientPromise) {
+    const { ListenBrainzClient } = await import('@kellnerd/listenbrainz')
+    lbClientPromise = Promise.resolve(
+      new ListenBrainzClient({
+        userToken: LB_TOKEN.trim(),
+        // se a lib suportar, você pode setar apiUrl/maxRetries aqui
+      }),
+    )
+  }
+  return lbClientPromise
+}
+
+// Regra sua: se prompt vier vazio => erro interno
 async function fetchLbRadio(
   prompt: string,
   mode: 'easy' | 'medium' | 'hard' = 'easy',
 ) {
-  const trimmed = (prompt ?? '').trim()
-  if (!trimmed) {
+  const p = (prompt ?? '').trim()
+  if (!p) {
     throw new ListenBrainzPromptEmptyError(
-      'prompt vazio em fetchLbRadio (isso não deveria acontecer)',
+      'prompt do fetchLbRadio está vazio',
     )
   }
 
-  const client = getLB()
-  const MAX_ATTEMPTS = 3
+  const client = await getLBClient()
 
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+  try {
+    // endpoint oficial: GET /1/explore/lb-radio :contentReference[oaicite:2]{index=2}
+    const data = (await client.get('/1/explore/lb-radio', {
+      prompt: p,
+      mode,
+    })) as LbRadioResponse
+
+    const tracks = data.payload?.jspf?.playlist?.track
+    return Array.isArray(tracks) ? tracks : []
+  } catch (err: any) {
+    // Ex.: ApiError 400 "Artist ... could not be looked up"
+    // A estratégia de seed por MBID (abaixo) ajuda a evitar isso. :contentReference[oaicite:3]{index=3}
+    throw err
+  }
+}
+
+// 
+// Helpers: MusicBrainz (via musicbrainz-api)
+// 
+
+const MBID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function isMbid(s: string) {
+  return MBID_RE.test((s ?? '').trim())
+}
+
+function luceneQuote(s: string) {
+  // escapa " e \
+  const safe = (s ?? '').replace(/([\\"])/g, '\\$1')
+  return `"${safe}"`
+}
+
+let mbApiPromise: Promise<any> | null = null
+async function getMBApi() {
+  if (!mbApiPromise) {
+    const { MusicBrainzApi } = await import('musicbrainz-api')
+    mbApiPromise = Promise.resolve(
+      new MusicBrainzApi({
+        // MusicBrainz pede que clientes se identifiquem por User-Agent
+        // via appName/appVersion/appContactInfo. :contentReference[oaicite:4]{index=4}
+        appName: MB_APP_NAME,
+        appVersion: MB_APP_VERSION,
+        appContactInfo: MB_APP_CONTACT,
+      }),
+    )
+  }
+  return mbApiPromise
+}
+
+/**
+ * Tenta descobrir o MBID do artista usando MusicBrainz.
+ *
+ * Estratégia:
+ * 1) se tiver (track + artist), tenta search em "recording" usando campos recording e artist,
+ *    porque você pediu "Use nome da música e mais nome do artista".
+ *    Campos "recording" e "artist" existem no Search Server. :contentReference[oaicite:5]{index=5}
+ * 2) fallback: search em "artist" pelo nome do artista.
+ */
+async function resolveArtistMbidFromMusicBrainz(
+  rawArtistName: string,
+  rawTrackName?: string | null,
+): Promise<string | null> {
+  const artistName = normalizeArtist(rawArtistName)
+  const trackName = (rawTrackName ?? '').trim()
+
+  if (!artistName) return null
+
+  const mb = await getMBApi()
+
+  // (1) recording search: recording:"..." AND artist:"..."
+  if (trackName) {
+    const q = `recording:${luceneQuote(trackName)} AND artist:${luceneQuote(
+      artistName,
+    )}`
+
     try {
-      const data = (await client.get(LB_RADIO_ENDPOINT, {
-        prompt: trimmed,
-        mode,
-      })) as LbRadioResponse
+      // assinatura aceita offset/limit conforme README (offset?, limit?) :contentReference[oaicite:6]{index=6}
+      const result = (await mb.search('recording', q, 0, 5)) as any
+      const recs: any[] = Array.isArray(result?.recordings)
+        ? result.recordings
+        : []
 
-      const tracks = data?.payload?.jspf?.playlist?.track
-      return Array.isArray(tracks) ? tracks : []
-    } catch (err: any) {
-      if (err instanceof ApiError) {
-        console.log('LB ApiError', err.statusCode, err.message)
-        return []
+      for (const r of recs) {
+        const ac = r?.['artist-credit'] ?? r?.artist_credit ?? r?.artistCredit
+        if (!Array.isArray(ac) || ac.length === 0) continue
+        const id = ac?.[0]?.artist?.id
+        if (typeof id === 'string' && isMbid(id)) return id
       }
-
-      if (isTransientNetworkError(err) && attempt < MAX_ATTEMPTS) {
-        const backoff = 250 * Math.pow(2, attempt - 1)
-        console.log(
-          `LB network error (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in ${backoff}ms`,
-          err?.cause?.code || err?.code,
-        )
-        await sleep(backoff)
-        continue
-      }
-
-      if (isTransientNetworkError(err)) {
-        console.log('LB network error (final):', err?.cause?.code || err?.code)
-        throw new ListenBrainzNetworkError(
-          `listenbrainz-network:${err?.cause?.code || err?.code || 'unknown'}`,
-          err,
-        )
-      }
-
-      console.log('LB error', err)
-      return []
+    } catch {
+      // ignora e tenta por artist abaixo
     }
   }
 
-  return []
+  // (2) artist search
+  try {
+    const result = (await mb.search('artist', { query: artistName }, 0, 1)) as any
+    const id = result?.artists?.[0]?.id
+    if (typeof id === 'string' && isMbid(id)) return id
+  } catch {
+    // nada
+  }
+
+  return null
 }
+
+// 
+// DB helpers
+// 
 
 async function cleanupExpired(prisma: any) {
   const now = new Date()
@@ -379,33 +465,83 @@ async function cleanupExpired(prisma: any) {
   })
 }
 
-// ✅ Nunca entregar música com deleteAt != null.
-// "tocáveis" = deleteAt=null e youtubeUrl não vazia
 async function countUndeliveredPlayable(prisma: any) {
   return prisma.radioRequest.count({
-    where: { deleteAt: null, youtubeUrl: { not: '' } },
+    where: {
+      deleteAt: null,
+      youtubeUrl: { not: null },
+    },
   })
 }
 
-async function peekOldestUndeliveredPlayable(prisma: any) {
+async function getLatestDeliveredByDeleteAt(prisma: any) {
   return prisma.radioRequest.findFirst({
-    where: { deleteAt: null, youtubeUrl: { not: '' } },
-    orderBy: { createdAt: 'asc' },
+    where: {
+      deleteAt: { not: null },
+      youtubeUrl: { not: null },
+    },
+    orderBy: { deleteAt: 'desc' },
+    select: { trackName: true, artistName: true },
   })
 }
 
-async function markAsDelivered(prisma: any, id: any) {
-  await prisma.radioRequest.update({
-    where: { id },
-    data: { deleteAt: new Date(Date.now() + DELETE_TTL_MS) },
+async function getLatestAnyByCreatedAt(prisma: any) {
+  return prisma.radioRequest.findFirst({
+    where: { youtubeUrl: { not: null } },
+    orderBy: { createdAt: 'desc' },
+    select: { trackName: true, artistName: true },
   })
 }
+
+/**
+ * Regra sua:
+ * - Se existe pelo menos 1 música com deleteAt=null (undelivered), podemos usar um seed "any" (última por createdAt).
+ * - Se NÃO existe nenhuma deleteAt=null, devemos tentar seed pela entregue mais recente (deleteAt mais novo).
+ * - Se nem isso existir => erro.
+ */
+async function getSeedTrackForLb(prisma: any, undeliveredPlayable: number) {
+  if (undeliveredPlayable > 0) {
+    // geralmente melhor para “continuar o vibe” do que seed vazio
+    return (await getLatestAnyByCreatedAt(prisma)) ?? null
+  }
+
+  const lastDelivered = await getLatestDeliveredByDeleteAt(prisma)
+  if (lastDelivered) return lastDelivered
+
+  throw new ListenBrainzSeedMissingError(
+    'Sem seed no banco: não existe deleteAt=null e também não existe nenhuma música entregue (deleteAt != null).',
+  )
+}
+
+async function buildLbSeedPrompt(prisma: any, undeliveredPlayable: number) {
+  const seed = await getSeedTrackForLb(prisma, undeliveredPlayable)
+
+  const seedArtist = (seed?.artistName ?? '').trim()
+  const seedTrack = (seed?.trackName ?? '').trim()
+
+  // Preferir MBID para evitar erro 400 “could not be looked up”.
+  // A doc do prompt diz que você pode usar artist MBID para ser preciso. :contentReference[oaicite:7]{index=7}
+  if (seedArtist) {
+    const mbid = await resolveArtistMbidFromMusicBrainz(seedArtist, seedTrack)
+    if (mbid) return buildPromptFromArtistMbid(mbid)
+    return buildPromptFromArtist(seedArtist)
+  }
+
+  if (seedTrack) return seedTrack
+
+  // Se cair aqui e ficar vazio, fetchLbRadio vai gerar erro interno (regra sua).
+  return ''
+}
+
+// 
+// Prefill
+// 
 
 async function ensurePrefill(prisma: any, opts?: { force?: boolean }) {
   const force = !!opts?.force
 
   const now = Date.now()
-  if (!force && now - lastAutofillAt < AUTOFILL_COOLDOWN_MS) return
+  if (!force && now - lastAutofillAt < AUTOFILL_COOLDOWN_MS) return 0
   lastAutofillAt = now
 
   const undeliveredPlayable = await countUndeliveredPlayable(prisma)
@@ -413,22 +549,28 @@ async function ensurePrefill(prisma: any, opts?: { force?: boolean }) {
     0,
     TARGET_UNDELIVERED_BEFORE_DELIVER - undeliveredPlayable,
   )
-  if (need === 0) return
+  if (need === 0) return 0
 
-  const lastPlayed = await prisma.radioRequest.findFirst({
-    orderBy: { createdAt: 'desc' },
-    select: { trackName: true, artistName: true },
-  })
+  const seedPrompt = await buildLbSeedPrompt(prisma, undeliveredPlayable)
 
-  const seedPrompt =
-    (lastPlayed?.artistName && buildPromptFromArtist(lastPlayed.artistName)) ||
-    (lastPlayed?.trackName?.trim() ? lastPlayed.trackName : '#rock')
+  // regra sua: prompt vazio => erro interno (vai virar 500 na rota)
+  if (!seedPrompt.trim()) {
+    throw new ListenBrainzPromptEmptyError(
+      'Seed prompt ficou vazio ao montar prompt do LB.',
+    )
+  }
 
   const lbTracks = await fetchLbRadio(seedPrompt, 'easy')
 
   let inserted = 0
   const seenComboKeys = new Set<string>()
-  const lastPlayedKey = normalizeTrackName(lastPlayed?.trackName ?? '')
+
+  // Para evitar repetir a última música “exata”, pegamos a última do DB (createdAt desc)
+  const lastAny = await prisma.radioRequest.findFirst({
+    orderBy: { createdAt: 'desc' },
+    select: { trackName: true },
+  })
+  const lastPlayedKey = normalizeTrackName(lastAny?.trackName ?? '')
 
   for (const t of lbTracks) {
     if (inserted >= need) break
@@ -470,32 +612,51 @@ async function ensurePrefill(prisma: any, opts?: { force?: boolean }) {
     inserted++
   }
 
+  // Se a fila estava totalmente vazia (sem nada playable) e não inseriu nada, erro.
   if (undeliveredPlayable === 0 && inserted === 0) {
     throw new ListenBrainzEmptyError(
       'ListenBrainz retornou playlist, mas nenhuma track foi resolvida para YouTube Music.',
     )
   }
+
+  return inserted
 }
 
-function internal500(message: string) {
-  return new Response(`${message}\n`, {
-    status: 500,
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      ...NO_CACHE_HEADERS,
-    },
+// 
+// Delivery
+// 
+
+/**
+ * Entrega o mais antigo (deleteAt=null, youtubeUrl!=null).
+ * Só marca deleteAt se houver "folga" (>= TARGET_UNDELIVERED_BEFORE_DELIVER).
+ *
+ * Isso atende sua regra:
+ * - “Só deve adicionar deleteAt ... até quando for a última música só deve adicionar deleteAt após achar próxima”
+ *   => se sobrar apenas 1 undeliveredPlayable, não marca deleteAt (entrega a mesma em chamadas subsequentes).
+ */
+function deliverOne(prisma: any, opts: { markDelivered: boolean }) {
+  return prisma.$transaction(async (tx: any) => {
+    const next = await tx.radioRequest.findFirst({
+      where: { deleteAt: null, youtubeUrl: { not: null } },
+      orderBy: { createdAt: 'asc' },
+    })
+
+    if (!next) return null
+
+    if (opts.markDelivered) {
+      await tx.radioRequest.update({
+        where: { id: next.id },
+        data: { deleteAt: new Date(Date.now() + DELETE_TTL_MS) },
+      })
+    }
+
+    return next
   })
 }
 
-function lb502(message: string) {
-  return new Response(`${message}\n`, {
-    status: 502,
-    headers: {
-      'Content-Type': 'text/plain; charset=utf-8',
-      ...NO_CACHE_HEADERS,
-    },
-  })
-}
+// 
+// Route
+// 
 
 export const Route = createFileRoute('/api/liquidsoap')({
   server: {
@@ -507,98 +668,119 @@ export const Route = createFileRoute('/api/liquidsoap')({
         try {
           await cleanupExpired(prisma)
         } catch {
-          console.log('catch cleanupExpired')
+          // não derruba
         }
 
-        // 1) tenta prefill “normal”
+        // 1) prefill só quando necessário
+        let inserted = 0
+        let undeliveredPlayableBefore = 0
+
         try {
-          await ensurePrefill(prisma)
+          undeliveredPlayableBefore = await countUndeliveredPlayable(prisma)
+          inserted = await ensurePrefill(prisma, {
+            force: undeliveredPlayableBefore === 0,
+          })
         } catch (err: any) {
-          if (err?.name === 'ListenBrainzPromptEmptyError')
-            return internal500(`internal-error:${err.message}`)
-          if (err?.name === 'ListenBrainzNetworkError')
-            return lb502(err.message)
-          if (err?.name === 'ListenBrainzEmptyError')
-            return lb502(`listenbrainz-error:${err.message}`)
+          // prompt vazio => erro interno (regra sua)
+          if (err?.name === 'ListenBrainzPromptEmptyError') {
+            return new Response(`internal-error:${err.message}\n`, {
+              status: 500,
+              headers: {
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Cache-Control': 'no-store, max-age=0, must-revalidate',
+                Pragma: 'no-cache',
+                Expires: '0',
+              },
+            })
+          }
+
+          // sem seed no banco => erro interno (regra sua)
+          if (err?.name === 'ListenBrainzSeedMissingError') {
+            return new Response(`internal-error:${err.message}\n`, {
+              status: 500,
+              headers: {
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Cache-Control': 'no-store, max-age=0, must-revalidate',
+                Pragma: 'no-cache',
+                Expires: '0',
+              },
+            })
+          }
+
+          // se LB não gerou nada útil e a fila estava vazia => 502
+          if (err?.name === 'ListenBrainzEmptyError') {
+            return new Response(`listenbrainz-error:${err.message}\n`, {
+              status: 502,
+              headers: {
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Cache-Control': 'no-store, max-age=0, must-revalidate',
+                Pragma: 'no-cache',
+                Expires: '0',
+              },
+            })
+          }
+
+          // outros erros: não derruba imediatamente, mas pode acabar sem música e retornar 500 abaixo
         }
 
-        // 2) pega o próximo pendente (deleteAt=null). Nunca usar replay.
+        // 2) reconta e entrega
+        let undeliveredPlayableAfter = 0
+        try {
+          undeliveredPlayableAfter = await countUndeliveredPlayable(prisma)
+        } catch {
+          undeliveredPlayableAfter = 0
+        }
+
+        // Sua regra: se não tiver nenhuma música deleteAt=null (playable), tenta seed por delivered (feito dentro do ensurePrefill force),
+        // e se ainda assim não tiver => erro.
+        if (undeliveredPlayableAfter === 0) {
+          return new Response(
+            `internal-error:sem-música-disponível (deleteAt=null) e não foi possível preencher\n`,
+            {
+              status: 500,
+              headers: {
+                'Content-Type': 'text/plain; charset=utf-8',
+                'Cache-Control': 'no-store, max-age=0, must-revalidate',
+                Pragma: 'no-cache',
+                Expires: '0',
+              },
+            },
+          )
+        }
+
+        // Só marca deleteAt se houver pelo menos TARGET pendentes (garante que sobra 1 depois).
+        const markDelivered =
+          undeliveredPlayableAfter >= TARGET_UNDELIVERED_BEFORE_DELIVER
+
         let next: any = null
         try {
-          next = await peekOldestUndeliveredPlayable(prisma)
+          next = await deliverOne(prisma, { markDelivered })
         } catch {
           next = null
         }
 
-        // 3) Se NÃO existir nenhum deleteAt=null, força prefill.
-        //    Se ainda assim não existir, ERRO (nunca 204, nunca replay).
-        if (!next) {
-          try {
-            await ensurePrefill(prisma, { force: true })
-          } catch (err: any) {
-            if (err?.name === 'ListenBrainzPromptEmptyError')
-              return internal500(`internal-error:${err.message}`)
-            if (err?.name === 'ListenBrainzNetworkError')
-              return lb502(err.message)
-            if (err?.name === 'ListenBrainzEmptyError')
-              return lb502(`listenbrainz-error:${err.message}`)
-          }
-
-          try {
-            next = await peekOldestUndeliveredPlayable(prisma)
-          } catch {
-            next = null
-          }
-
-          if (!next?.youtubeUrl) {
-            return internal500('internal-error:no-undelivered-tracks')
-          }
+        // Nunca entregar música com deleteAt != null: garantido por where deleteAt=null.
+        // Se falhou, erro 500 (sem 204).
+        if (!next?.youtubeUrl) {
+          return new Response(`internal-error:sem-youtubeUrl-para-entregar\n`, {
+            status: 500,
+            headers: {
+              'Content-Type': 'text/plain; charset=utf-8',
+              'Cache-Control': 'no-store, max-age=0, must-revalidate',
+              Pragma: 'no-cache',
+              Expires: '0',
+            },
+          })
         }
 
-        // 4) existe "next" pendente (deleteAt=null).
-        //    Regra: só marca deleteAt no final; se for a última, só marca depois de achar próxima.
-        let undeliveredPlayable = 0
-        try {
-          undeliveredPlayable = await countUndeliveredPlayable(prisma)
-        } catch {
-          undeliveredPlayable = 0
-        }
-
-        if (undeliveredPlayable <= 1) {
-          try {
-            await ensurePrefill(prisma, { force: true })
-          } catch (err: any) {
-            if (err?.name === 'ListenBrainzPromptEmptyError')
-              return internal500(`internal-error:${err.message}`)
-            if (err?.name === 'ListenBrainzNetworkError')
-              return lb502(err.message)
-            if (err?.name === 'ListenBrainzEmptyError') {
-              // não marca deleteAt -> evita "sumir" a última
-              console.log('listenbrainz empty while last track:', err.message)
-            }
-          }
-
-          try {
-            undeliveredPlayable = await countUndeliveredPlayable(prisma)
-          } catch {
-            undeliveredPlayable = 0
-          }
-        }
-
-        // Só marca como entregue se garantir que havia >=2 pendentes antes de marcar
-        if (undeliveredPlayable >= 2 && next?.id) {
-          try {
-            await markAsDelivered(prisma, next.id)
-          } catch {
-            // não derruba
-          }
-        }
-
+        // 3) resposta pronta pra AzuraCast (1 linha)
         return new Response(`youtube-dl:${next.youtubeUrl}\n`, {
           status: 200,
           headers: {
             'Content-Type': 'text/plain; charset=utf-8',
-            ...NO_CACHE_HEADERS,
+            'Cache-Control': 'no-store, max-age=0, must-revalidate',
+            Pragma: 'no-cache',
+            Expires: '0',
           },
         })
       },
